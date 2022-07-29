@@ -90,26 +90,23 @@ def myschedule(steps):
     return jnp.select([steps<warmup_steps,
                       steps<cos_steps],
                       [0.1*steps/warmup_steps,
-                      0.1*(0.5*jnp.cos(jnp.pi*steps/cos_steps)+0.5)+alpha
+                      0.1*(0.5*jnp.cos(jnp.pi*(steps-warmup_steps)/cos_steps)+0.5)+alpha
                       ],alpha)
 
     
 def log_softmax(x):
   x_max=jnp.max(x,axis=-1,keepdims=True)
   x=x- jax.lax.stop_gradient(x_max) 
-  x=x-jnp.log(jnp.sum(np.exp(x),axis=-1,keepdims=True))
+  x=x-jnp.log(jnp.sum(jnp.exp(x),axis=-1,keepdims=True))
   return x
 
 def loss_fn(params, batch):
     inputs, targets = batch
     logits = predict_fun(params, inputs)
     target_class =targets
-    targets=jax.nn.one_hot(targets,1000)
-    
-    loss = jnp.mean(-jnp.sum(log_softmax(logits)*targets,axis=-1))
-    predicted_class = jnp.argmax(logits, axis=-1)
-    acc_count=jnp.sum(predicted_class == target_class)
+    targets=jax.nn.one_hot(targets,1000)    
 
+    loss = jnp.mean(-jnp.sum(log_softmax(logits)*targets,axis=-1))  
     weight_penalty_params = jax.tree_leaves(params)
     weight_decay = 0.0001
     weight_l2 = sum(jnp.sum(x ** 2)
@@ -117,6 +114,9 @@ def loss_fn(params, batch):
                      if x.ndim > 1)
     weight_penalty = weight_decay * 0.5 * weight_l2
     loss = loss + weight_penalty
+
+    predicted_class = jnp.argmax(logits, axis=-1)
+    acc_count=jnp.sum(predicted_class == target_class)    
     return loss,(loss,acc_count,target_class,predicted_class)
 
 @jit
@@ -124,7 +124,6 @@ def accuracy(params, batch):
     inputs, targets = batch
     target_class =targets
     y=predict_fun(params, inputs)
-    # print(y.shape)
     predicted_class = jnp.argmax(y, axis=-1)
     return jnp.sum(predicted_class == target_class)
 @jit
@@ -136,10 +135,8 @@ def update(steps,params, updates, batch):
     params=jax.tree_util.tree_map(lambda x,y: x-y,params,updates)
     return params,updates,ans,lr
 
-if __name__ == "__main__":
-  
-  train_ds =getDataLoader(batch_size=config.batch_size,collate_fn=numpy_collate)
-  
+if __name__ == "__main__":  
+  train_ds =getDataLoader(batch_size=config.batch_size,collate_fn=numpy_collate)  
   epochs=100  
   params=init_params
   updates=jax.tree_util.tree_map(lambda x:jnp.zeros_like(x),params)
