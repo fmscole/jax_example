@@ -73,14 +73,12 @@ def ResNet50(num_classes):
       Dense(num_classes)
       )
 
-
 rng_key = random.PRNGKey(0)  
 num_classes = 1000
 input_shape = (1,224, 224, 3)
 init_fun, predict_fun = ResNet50(num_classes)  
 outshape, init_params = init_fun(rng_key, input_shape)
 print(outshape)
-
 
 steps_per_epoch=40000//config.batch_size
 def myschedule(steps):
@@ -92,7 +90,6 @@ def myschedule(steps):
                       [0.1*steps/warmup_steps,
                       0.1*(0.5*jnp.cos(jnp.pi*(steps-warmup_steps)/cos_steps)+0.5)+alpha
                       ],alpha)
-
     
 def log_softmax(x):
   x_max=jnp.max(x,axis=-1,keepdims=True)
