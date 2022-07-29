@@ -88,7 +88,7 @@ def myschedule(steps):
     cos_steps=(config.num_epochs-config.warmup_epochs)*steps_per_epoch
     alpha=0.00001
     return jnp.select([steps<warmup_steps,
-                      steps<cos_steps],
+                      steps<config.num_epochs*steps_per_epoch],
                       [0.1*steps/warmup_steps,
                       0.1*(0.5*jnp.cos(jnp.pi*(steps-warmup_steps)/cos_steps)+0.5)+alpha
                       ],alpha)
