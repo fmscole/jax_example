@@ -6,6 +6,7 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 import tensorflow_datasets as tfds
+import tensorflow as tf 
 
 batch_size=100
 num_epochs=100
@@ -52,13 +53,14 @@ def update_model(state, grads):
   return state.apply_gradients(grads=grads)
 
 def get_datasets():
-  ds_builder = tfds.builder('fashion_mnist')
-  ds_builder.download_and_prepare()
-  train_ds = tfds.as_numpy(ds_builder.as_dataset(split='train', batch_size=-1))
-  test_ds = tfds.as_numpy(ds_builder.as_dataset(split='test', batch_size=-1))
-  train_ds['image'] = jnp.float32(train_ds['image']) / 255.
-  test_ds['image'] = jnp.float32(test_ds['image']) / 255.
-  return train_ds, test_ds
+  with tf.device('/cpu:0'):
+    ds_builder = tfds.builder('fashion_mnist')
+    ds_builder.download_and_prepare()
+    train_ds = tfds.as_numpy(ds_builder.as_dataset(split='train', batch_size=-1))
+    test_ds = tfds.as_numpy(ds_builder.as_dataset(split='test', batch_size=-1))
+    train_ds['image'] = jnp.float32(train_ds['image']) / 255.
+    test_ds['image'] = jnp.float32(test_ds['image']) / 255.
+    return train_ds, test_ds
 
 def create_train_state(rng):
   cnn = CNN()
