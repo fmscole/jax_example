@@ -3,6 +3,11 @@ from torch.utils.data import Dataset,DataLoader,random_split
 import torchvision.transforms as transforms
 import numpy as np
 from PIL import Image
+'''
+ILSVRC2012_img_val/
+|---val_list.txt
+|---images/
+'''
 class ImageNetBaseSet(Dataset):
     def __init__(self,data_root=r"/home/fms/data/ILSVRC2012_img_val"):               
         data_txt=data_root+r'/val_list.txt'
