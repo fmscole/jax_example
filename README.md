@@ -3,15 +3,10 @@
 #### 介绍
 examples for jax/stax/flax/trax
 
-#### 软件架构
-软件架构说明
-
-
 #### 安装教程
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+1.  pip install jax
+
 
 #### 使用说明
 
