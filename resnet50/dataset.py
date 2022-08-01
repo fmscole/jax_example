@@ -9,7 +9,7 @@ ILSVRC2012_img_val/
 |---images/
 '''
 class ImageNetBaseSet(Dataset):
-    def __init__(self,data_root=r"/home/fms/data/ILSVRC2012_img_val"):               
+    def __init__(self,data_root=r"/mnt/e/dataset/ILSVRC2012_img_val"):               
         data_txt=data_root+r'/val_list.txt'
         self.transforms=transforms   
 

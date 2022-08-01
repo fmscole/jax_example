@@ -13,11 +13,20 @@ num_epochs=30
 class CNN(nn.Module):
   @nn.compact
   def __call__(self, x,is_training:bool=True):
-    # x = nn.Conv(features=32, kernel_size=(3, 3))(x)
+    x = nn.Conv(features=32, kernel_size=(3, 3))(x)
     x = nn.BatchNorm(use_running_average=not is_training)(x)
-    # x = nn.relu(x)
-    # x = nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+    x = nn.relu(x)
+    x = nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
 
+    x = nn.Conv(features=128, kernel_size=(3, 3))(x)
+    x = nn.BatchNorm(use_running_average=not is_training)(x)
+    x = nn.relu(x)
+    x = nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
+
+    x = nn.Conv(features=512, kernel_size=(3, 3))(x)
+    x = nn.BatchNorm(use_running_average=not is_training)(x)
+    x = nn.relu(x)
+    x = nn.avg_pool(x, window_shape=(7, 7), strides=(1, 1))
     # x = nn.Conv(features=64, kernel_size=(3, 3))(x)
     # x = nn.BatchNorm(use_running_average=not is_training)(x)
     # x = nn.relu(x)
@@ -34,15 +43,16 @@ class CNN(nn.Module):
     # k=k*q
     # v = nn.relu(v)
 
-    k=x
-    q=x
-    v=x
+    # k=x
+    # q=x
+    # v=x
     
-    k=k.transpose(0,2,1,3)
-    t=q*k/16
-    s=nn.softmax(t,axis=2)    
-    x=s*v
-
+    # k=k.transpose(0,2,1,3)
+    # t=q*k/16
+    # s=nn.softmax(t,axis=2)    
+    # x=s*v
+    # x=jnp.max(x,axis=(2,3))
+    # print(x.shape)
     x = x.reshape((x.shape[0], -1))
     x = nn.Dense(features=10)(x)
     return x
@@ -111,7 +121,7 @@ def predict(state, batch_stats,image_i):
 def test(state, batch_stats,test_ds):
   images = test_ds['image']
   labels = test_ds['label']
-  batchs=1000
+  batchs=100
   accuracy=0
   for i in range(0,len(images),batchs):
     image_i=images[i:i+batchs]
