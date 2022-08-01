@@ -108,9 +108,11 @@ def test(state, variables,test_ds):
   for (x,y) in test_generator:
     x=np.array(x)
     y=np.array(y)
-    # jax.device_put(x)
-    # jax.device_put(y)
-    logits= predict(state, variables,x)
+    jax.device_put(x)
+    jax.device_put(y)
+    # print("1")
+    logits= predict(state, variables,x).block_until_ready()
+    # print("2")
     logits=logits*(trainset.data_max-trainset.data_min)+trainset.data_min
     label_i=y*(trainset.data_max-trainset.data_min)+trainset.data_min
     accuracy += jnp.sum(jnp.average(jnp.abs(logits-label_i)/label_i*100,axis=-1))  
@@ -123,11 +125,9 @@ def train_epoch(state, train_ds, batch_size, rng,variables):
   for (x,y) in training_generator:
     x=np.array(x)
     y=np.array(y)
-    # print(x.shape,x)
-    # print(y.shape,y)
-    # break
-    # jax.device_put(x)
-    # jax.device_put(y)
+    
+    jax.device_put(x)
+    jax.device_put(y)
     rng, dropout_rng = jax.random.split(rng)
     grads, loss, accuracy ,variables,y= apply_model(state, x, y,variables,dropout_rng)
     

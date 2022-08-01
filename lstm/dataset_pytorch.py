@@ -39,5 +39,5 @@ class StocksSet(Dataset):
 trainset=StocksSet()
 test_dataset=StocksSet(is_train=False)
 training_generator=DataLoader(trainset, batch_size=100, num_workers=4)
-test_generator = DataLoader(test_dataset, batch_size=100, num_workers=4)
+test_generator = DataLoader(test_dataset, batch_size=1, num_workers=4)
 
