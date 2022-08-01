@@ -5,13 +5,13 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
-# from pandas import array
-# import tensorflow_datasets as tfds
-# import tensorflow as tf 
+from pandas import array
+import tensorflow_datasets as tfds
+import tensorflow as tf 
 
-from  stocks_dataset import x_train,x_test,y_train,y_test,data_min,data_max
-# from dataset_pytorch import training_generator,test_generator,trainset
-batch_size=50
+# from  stocks_dataset import x_train,x_test,y_train,y_test,data_min,data_max
+from dataset_pytorch import training_generator,test_generator,trainset
+batch_size=100
 num_epochs=30
 class SimpleScan(nn.Module):
     @nn.compact
@@ -65,10 +65,10 @@ def apply_model(state, images, labels,old_variables,dropout_rng):
 
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
   (loss, (logits,new_batch_stats)), grads = grad_fn(state.params,old_variables)
-  logits=logits*(data_max-data_min)+data_min
-  labels=labels*(data_max-data_min)+data_min
+  logits=logits*(trainset.data_max-trainset.data_min)+trainset.data_min
+  labels=labels*(trainset.data_max-trainset.data_min)+trainset.data_min
   accuracy =jnp.sum(jnp.average(jnp.abs(logits-labels)/labels*100,axis=-1))  
-  return grads, loss, accuracy,new_batch_stats,logits,labels
+  return grads, loss, accuracy,new_batch_stats,logits
 
 @jax.jit
 def update_model(state, grads):
@@ -104,52 +104,59 @@ def predict(state, variables,image_i):
   return logits
 def test(state, variables,test_ds):  
   accuracy=0
-  batch_size=5000
-  for i in range(0,len(y_test),batch_size):
-    x=x_test[i:i+batch_size]
-    y=y_test[i:i+batch_size]
+  batch_size=50
+  for (x,y) in test_generator:
+    x=np.array(x)
+    y=np.array(y)
+    # jax.device_put(x)
+    # jax.device_put(y)
     logits= predict(state, variables,x)
-    logits=logits*(data_max-data_min)+data_min
-    label_i=y*(data_max-data_min)+data_min
+    logits=logits*(trainset.data_max-trainset.data_min)+trainset.data_min
+    label_i=y*(trainset.data_max-trainset.data_min)+trainset.data_min
     accuracy += jnp.sum(jnp.average(jnp.abs(logits-label_i)/label_i*100,axis=-1))  
-  return accuracy/len(y_test)
+  return accuracy/trainset.test_len
 
 def train_epoch(state, train_ds, batch_size, rng,variables):
   
   epoch_loss = []
   sum_accuracy = 0
-  for i in range(0,len(y_train),batch_size):
-    x=x_train[i:i+batch_size]
-    y=y_train[i:i+batch_size]
+  for (x,y) in training_generator:
+    x=np.array(x)
+    y=np.array(y)
+    # print(x.shape,x)
+    # print(y.shape,y)
+    # break
+    # jax.device_put(x)
+    # jax.device_put(y)
     rng, dropout_rng = jax.random.split(rng)
-    grads, loss, accuracy ,variables,logits,labels= apply_model(state, x, y,variables,dropout_rng)
+    grads, loss, accuracy ,variables,y= apply_model(state, x, y,variables,dropout_rng)
     
     state = update_model(state, grads)
     
     epoch_loss.append(loss)
     sum_accuracy +=accuracy
   train_loss = np.mean(epoch_loss)
-  train_accuracy = sum_accuracy/len(y_train)
-  return state, train_loss, train_accuracy,variables,logits,labels
+  train_accuracy = sum_accuracy/trainset.train_len
+  return state, train_loss, train_accuracy,variables,y
 
 def train_and_evaluate() -> train_state.TrainState:
   train_ds, test_ds =None,None
   rng = jax.random.PRNGKey(0)  
   rng, init_rng = jax.random.split(rng)
   state,variables = create_train_state(init_rng)
+  # print(jax.tree_util.tree_map(lambda x:x.shape,state.params))
+  print(trainset.data_max,trainset.data_min)
   for epoch in range(1, 100 + 1):
     rng, input_rng = jax.random.split(rng)
-    state, train_loss, train_accuracy,variables,logits,labels = train_epoch(state, train_ds,
+    state, train_loss, train_accuracy,variables,y = train_epoch(state, train_ds,
                                                     batch_size=batch_size,
                                                     rng=input_rng,variables=variables)   
     print("") 
     print("epoch:",epoch)                                         
     print(f"train Error_ratio={train_accuracy:2.1f}%")     
     print(f"test Error_ratio={test(state, variables,test_ds):2.1f}%")
-    print(logits[0])
-    print(labels[0])
     # print(y)
   
   return state
-if __name__ == '__main__':
-  train_and_evaluate() 
+
+train_and_evaluate() 

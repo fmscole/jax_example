@@ -21,6 +21,7 @@ features, labels = np.array(features), np.array(labels)
 features = np.reshape(features, (features.shape[0], features.shape[1], -1))
 x_train,x_test,y_train,y_test= features[:6500],features[6500 : 7200],labels[:6500],labels[6500 :7200]
 
+
 print(len(all_data_scaled))
 print(y_train.shape,y_test.shape)
 '''
