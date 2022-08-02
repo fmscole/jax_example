@@ -3,7 +3,7 @@
 #### 介绍
 examples for jax/stax/flax/trax
 
-#### 安装教程
+#### 安装教程 
 
 1.  pip install jax
 
