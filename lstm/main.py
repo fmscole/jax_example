@@ -110,9 +110,9 @@ def test(state, variables,test_ds):
     y=np.array(y)
     jax.device_put(x)
     jax.device_put(y)
-    print("1")
-    logits= predict(state, variables,x).block_until_ready()
-    print("2")
+    
+    # logits= predict(state, variables,x).block_until_ready()
+    logits= predict(state, variables,x)
     logits=logits*(trainset.data_max-trainset.data_min)+trainset.data_min
     label_i=y*(trainset.data_max-trainset.data_min)+trainset.data_min
     accuracy += jnp.sum(jnp.average(jnp.abs(logits-label_i)/label_i*100,axis=-1))  
@@ -130,7 +130,7 @@ def train_epoch(state, train_ds, batch_size, rng,variables):
     jax.device_put(y)
     rng, dropout_rng = jax.random.split(rng)
     grads, loss, accuracy ,variables,y= apply_model(state, x, y,variables,dropout_rng)
-    
+    # loss.block_until_ready()
     state = update_model(state, grads)
     
     epoch_loss.append(loss)
@@ -146,7 +146,7 @@ def train_and_evaluate() -> train_state.TrainState:
   state,variables = create_train_state(init_rng)
   # print(jax.tree_util.tree_map(lambda x:x.shape,state.params))
   print(trainset.data_max,trainset.data_min)
-  for epoch in range(1, 100 + 1):
+  for epoch in range(1, 1000 + 1):
     rng, input_rng = jax.random.split(rng)
     state, train_loss, train_accuracy,variables,y = train_epoch(state, train_ds,
                                                     batch_size=batch_size,
