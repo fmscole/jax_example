@@ -2,12 +2,14 @@
 from flax import linen as nn
 from flax.training import train_state
 import jax
+import flax
 import jax.numpy as jnp
 import numpy as np
 import optax
 import tensorflow_datasets as tfds
 import tensorflow as tf 
-
+import pickle
+import os
 batch_size=100
 num_epochs=100
 class CNN(nn.Module):
@@ -81,6 +83,7 @@ def create_train_state(rng):
   schedule=create_learning_rate_fn(base_learning_rate=0.01,steps_per_epoch=steps_per_epoch)
   tx = optax.sgd(learning_rate=schedule,momentum= 0.90)
   state=train_state.TrainState.create(apply_fn=cnn.apply, params=params, tx=tx)
+  
   return state,batch_stats
 
 @jax.jit
@@ -122,20 +125,40 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
   train_accuracy = np.mean(epoch_accuracy)
   return state, train_loss, train_accuracy,batch_stats
 
+def save_weights(weights,filename):
+  bytes_output=flax.serialization.to_bytes(target=weights)
+  pickle.dump(bytes_output,open(filename,"wb"))
+
+def load_weights(weights,filename):
+  pkl_file=pickle.load(open(filename,"rb"))
+  tained_weights=flax.serialization.from_bytes(target=weights,encoded_bytes=pkl_file)
+  return tained_weights
+
 def train_and_evaluate() -> train_state.TrainState:
   train_ds, test_ds = get_datasets()
   rng = jax.random.PRNGKey(0)  
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
-  
+
+  filename="best.npy"
+  if os.path.exists(filename):
+    weights={"state":state,"batch_stats":batch_stats}
+    weights=load_weights(weights,filename)
+    state=weights["state"]
+    batch_stats=weights["batch_stats"]
+  best=0
   for epoch in range(1, num_epochs + 1):
     rng, input_rng = jax.random.split(rng)
     state, train_loss, train_accuracy,batch_stats = train_epoch(state, train_ds,
                                                     batch_size=batch_size,
                                                     rng=input_rng,batch_stats=batch_stats)    
     
-    print(test(state, batch_stats,test_ds),end=" ")
-  
+    p=test(state, batch_stats,test_ds)
+    print(p,end=" ")
+    if p>best:
+      weights={"state":state,"batch_stats":batch_stats}
+      save_weights(weights,filename)
+      best=p
   return state
 
 train_and_evaluate() 
