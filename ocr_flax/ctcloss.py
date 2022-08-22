@@ -1,5 +1,5 @@
 import jax.numpy as np
-
+import jax
 
 ninf = -np.float('inf')
 
@@ -16,151 +16,156 @@ def logsumexp(*args):
     for e in args[1:]:
         res = _logsumexp(res, e)
     return res
-class CTC:
-    def __init__(self):
-        pass
-    def forward(self):
-        pass
-    def insert_blank(labels, blank=0):
-        new_labels = [blank]
-        for l in labels:
-            new_labels += [l, blank]
-        return new_labels
-    def alpha(self, log_y, labels,target_len):
-        labels=labels[:target_len]
-        labels=self.insert_blank(labels)
-        T, V = log_y.shape
-        L = len(labels)
-        log_alpha = np.ones([T, L]) * ninf
-        log_alpha[0, 0] = log_y[0, labels[0]]
-        log_alpha[0, 1] = log_y[0, labels[1]]
-        for t in range(1, T):
-            for i in range(L):
-                s = labels[i]
-                a = log_alpha[t - 1, i]
-                if i - 1 >= 0:
-                    a = logsumexp(a, log_alpha[t - 1, i - 1])
-                if i - 2 >= 0 and s != 0 and s != labels[i - 2]:
-                    a = logsumexp(a, log_alpha[t - 1, i - 2])
-                log_alpha[t, i] = a + log_y[t, s]
-        return log_alpha
+def insert_blank(labels, blank=0):
+    new_labels = [blank]
+    for l in labels:
+        new_labels += [l, blank]
+    return new_labels
+def loop_for_fun(i,state):
+    t,log_alpha,log_y,labels=state
+    s = labels[i]
+    a = log_alpha[t - 1, i]
+    if i - 1 >= 0:
+        a = logsumexp(a, log_alpha[t - 1, i - 1])
+    if i - 2 >= 0 and s != 0 and s != labels[i - 2]:
+        a = logsumexp(a, log_alpha[t - 1, i - 2])
+    log_alpha=log_alpha.at[t, i].set( a + log_y[t, s])
+    return log_alpha
+def loop_for_i(t,st):
+    L,log_alpha,log_y,labels=st
+    state=(t,log_alpha,log_y,labels)
+    jax.lax.fori_loop(0,L,loop_for_fun,state)
+    return log_alpha
+def alpha(log_y, labels):
+    # labels=labels[:target_len]
+    labels=labels[labels>0]
+    labels=insert_blank(labels)
+    T, V = log_y.shape
+    L = len(labels)
+    log_alpha = np.ones([T, L]) * ninf
+    log_alpha=log_alpha.at[0, 0].set(log_y[0, labels[0]])
+    log_alpha=log_alpha.at[0, 1] .set(log_y[0, labels[1]])
+    state=(L,log_alpha,log_y,labels)
+    log_alpha=jax.lax.fori_loop(0,T,loop_for_i,state)            
+    return log_alpha[-1,labels[-1]]+log_alpha[-1,labels[-2]]
+def ctcloss(logits, targets):
+    return jax.vmap(alpha, in_axes=(0), out_axes=0)(logits, targets)
 
+    # def beta(self, log_y, labels):
+    #     T, V = log_y.shape
+    #     L = len(labels)
+    #     log_beta = np.ones([T, L]) * ninf
+    #     log_beta[-1, -1] = log_y[-1, labels[-1]]
+    #     log_beta[-1, -2] = log_y[-1, labels[-2]]
 
-    def beta(self, log_y, labels):
-        T, V = log_y.shape
-        L = len(labels)
-        log_beta = np.ones([T, L]) * ninf
-        log_beta[-1, -1] = log_y[-1, labels[-1]]
-        log_beta[-1, -2] = log_y[-1, labels[-2]]
+    #     for t in range(T - 2, -1, -1):
+    #         for i in range(L):
+    #             s = labels[i]
 
-        for t in range(T - 2, -1, -1):
-            for i in range(L):
-                s = labels[i]
+    #             a = log_beta[t + 1, i]
+    #             if i + 1 < L:
+    #                 a = logsumexp(a, log_beta[t + 1, i + 1])
+    #             if i + 2 < L and s != 0 and s != labels[i + 2]:
+    #                 a = logsumexp(a, log_beta[t + 1, i + 2])
 
-                a = log_beta[t + 1, i]
-                if i + 1 < L:
-                    a = logsumexp(a, log_beta[t + 1, i + 1])
-                if i + 2 < L and s != 0 and s != labels[i + 2]:
-                    a = logsumexp(a, log_beta[t + 1, i + 2])
+    #             log_beta[t, i] = a + log_y[t, s]
 
-                log_beta[t, i] = a + log_y[t, s]
+    #     return log_beta
 
-        return log_beta
+    # def backward(self,log_y, labels):
+    #     T, V = log_y.shape
+    #     L = len(labels)
 
-    def backward(self,log_y, labels):
-        T, V = log_y.shape
-        L = len(labels)
+    #     log_alpha = self.alpha(log_y, labels)
+    #     log_beta = self.beta(log_y, labels)
+    #     log_p = logsumexp(log_alpha[-1, -1], log_alpha[-1, -2])
+    #     ##ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ìµï¿½
+    #     log_grad = np.ones([T, V]) * ninf
+    #     for t in range(T):
+    #         for s in range(V):
+    #             lab = [i for i, c in enumerate(labels) if c == s]
+    #             for i in lab:
+    #                 log_grad[t, s] = logsumexp(log_grad[t, s],
+    #                                         log_alpha[t, i] + log_beta[t, i])
+    #             log_grad[t, s] -= 2 * log_y[t, s]
 
-        log_alpha = self.alpha(log_y, labels)
-        log_beta = self.beta(log_y, labels)
-        log_p = logsumexp(log_alpha[-1, -1], log_alpha[-1, -2])
-        ##ÈÎÒâÊ±¿ÌµÄ
-        log_grad = np.ones([T, V]) * ninf
-        for t in range(T):
-            for s in range(V):
-                lab = [i for i, c in enumerate(labels) if c == s]
-                for i in lab:
-                    log_grad[t, s] = logsumexp(log_grad[t, s],
-                                            log_alpha[t, i] + log_beta[t, i])
-                log_grad[t, s] -= 2 * log_y[t, s]
+    #     log_grad -= log_p
+    #     return log_grad
 
-        log_grad -= log_p
-        return log_grad
+    # def predict(self):
+    #     pass
 
-    def predict(self):
-        pass
+    # def ctc_prefix(self):
+    #     pass
 
-    def ctc_prefix(self):
-        pass
+    # def ctc_beamsearch(self):
+    #     pass
 
-    def ctc_beamsearch(self):
-        pass
+    # def alpha_vanilla(self, y, labels):
+    #     T, V = y.shape  # T,time step, V: probs
+    #     L = len(labels) # label length
+    #     alpha = np.zeros([T, L])
 
-    def alpha_vanilla(self, y, labels):
-        T, V = y.shape  # T,time step, V: probs
-        L = len(labels) # label length
-        alpha = np.zeros([T, L])
+    #     # init
+    #     alpha[0, 0] = y[0, labels[0]]
+    #     alpha[0, 1] = y[0, labels[1]]
 
-        # init
-        alpha[0, 0] = y[0, labels[0]]
-        alpha[0, 1] = y[0, labels[1]]
+    #     for t in range(1, T):
+    #         for i in range(L):
+    #             s = labels[i]
 
-        for t in range(1, T):
-            for i in range(L):
-                s = labels[i]
+    #             a = alpha[t - 1, i]
+    #             if i - 1 >= 0:
+    #                 a += alpha[t - 1, i - 1]
+    #             if i - 2 >= 0 and s != 0 and s != labels[i - 2]:
+    #                 a += alpha[t - 1, i - 2]
 
-                a = alpha[t - 1, i]
-                if i - 1 >= 0:
-                    a += alpha[t - 1, i - 1]
-                if i - 2 >= 0 and s != 0 and s != labels[i - 2]:
-                    a += alpha[t - 1, i - 2]
+    #             alpha[t, i] = a * y[t, s]
 
-                alpha[t, i] = a * y[t, s]
+    #     return alpha
 
-        return alpha
+    # def beta_vanilla(self, y, labels):
+    #     ##Ô­Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½,Ã»ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½ï¿½
+    #     T, V = y.shape
+    #     L = len(labels)
+    #     beta = np.zeros([T, L])
 
-    def beta_vanilla(self, y, labels):
-        ##Ô­Ê¼°æ¼ÆËãÇ°Ïò¸ÅÂÊ,Ã»ÔÚ¶ÔÊýÓòÖÐ¼ÆËã
-        T, V = y.shape
-        L = len(labels)
-        beta = np.zeros([T, L])
+    #     # init
+    #     beta[-1, -1] = y[-1, labels[-1]]
+    #     beta[-1, -2] = y[-1, labels[-2]]
 
-        # init
-        beta[-1, -1] = y[-1, labels[-1]]
-        beta[-1, -2] = y[-1, labels[-2]]
+    #     for t in range(T - 2, -1, -1):
+    #         for i in range(L):
+    #             s = labels[i]
 
-        for t in range(T - 2, -1, -1):
-            for i in range(L):
-                s = labels[i]
+    #             a = beta[t + 1, i]
+    #             if i + 1 < L:
+    #                 a += beta[t + 1, i + 1]
+    #             if i + 2 < L and s != 0 and s != labels[i + 2]:
+    #                 a += beta[t + 1, i + 2]
 
-                a = beta[t + 1, i]
-                if i + 1 < L:
-                    a += beta[t + 1, i + 1]
-                if i + 2 < L and s != 0 and s != labels[i + 2]:
-                    a += beta[t + 1, i + 2]
+    #             beta[t, i] = a * y[t, s]
 
-                beta[t, i] = a * y[t, s]
+    #     return beta
 
-        return beta
+    # def gradient(self, y, labels):
+    #     T, V = y.shape
+    #     L = len(labels)
 
-    def gradient(self, y, labels):
-        T, V = y.shape
-        L = len(labels)
+    #     alpha = self.alpha_vanilla(y, labels)
+    #     beta = self.beta(y, labels)
+    #     p = alpha[-1, -1] + alpha[-1, -2]
 
-        alpha = self.alpha_vanilla(y, labels)
-        beta = self.beta(y, labels)
-        p = alpha[-1, -1] + alpha[-1, -2]
+    #     grad = np.zeros([T, V])
+    #     for t in range(T):
+    #         for s in range(V):
+    #             lab = [i for i, c in enumerate(labels) if c == s]
+    #             for i in lab:
+    #                 grad[t, s] += alpha[t, i] * beta[t, i]
+    #             grad[t, s] /= y[t, s] ** 2
 
-        grad = np.zeros([T, V])
-        for t in range(T):
-            for s in range(V):
-                lab = [i for i, c in enumerate(labels) if c == s]
-                for i in lab:
-                    grad[t, s] += alpha[t, i] * beta[t, i]
-                grad[t, s] /= y[t, s] ** 2
-
-        grad /= p
-        return grad
+    #     grad /= p
+    #     return grad
 
 
 
@@ -182,7 +187,7 @@ class CTC:
 
 #     grad_2 = (log_p1 - log_p2) / (2 * delta)
 #     if np.abs(grad_1 - grad_2) > toleration:
-#         print('[%d, %d]£º%.2e' % (w, v, np.abs(grad_1 - grad_2)))
+#         print('[%d, %d]ï¿½ï¿½%.2e' % (w, v, np.abs(grad_1 - grad_2)))
 
 
 def remove_blank(labels, blank=0):
@@ -196,11 +201,7 @@ def remove_blank(labels, blank=0):
 
     return new_labels
 
-def insert_blank(labels, blank=0):
-    new_labels = [blank]
-    for l in labels:
-        new_labels += [l, blank]
-    return new_labels
+
 
 def greedy_decode(y, blank=0):
     raw_rs = np.argmax(y, axis=1)

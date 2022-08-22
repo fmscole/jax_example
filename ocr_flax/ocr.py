@@ -14,7 +14,7 @@ import pickle
 import os
 from crnn import CRNN
 from config import cfg
-
+# from ctcloss import CTCLoss
 
 batch_size=100
 num_epochs=100
@@ -41,7 +41,7 @@ def apply_model(state, batch,old_batch_stats):
     logit_paddings=jnp.zeros(logits.shape[0:2])
     loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
     
-    loss=-jnp.mean(loss)
+    loss=jnp.mean(loss)
 
     # weight_penalty_params = jax.tree_leaves(params)
     # weight_decay = 0.0001
@@ -77,7 +77,7 @@ def create_train_state(rng):
 
   steps_per_epoch=60000//batch_size
   schedule=create_learning_rate_fn(base_learning_rate=0.001,steps_per_epoch=steps_per_epoch)
-  tx = optax.sgd(learning_rate=0.00001,momentum= 0.90)
+  tx = optax.sgd(learning_rate=0.001,momentum= 0.90)
   state=train_state.TrainState.create(apply_fn=crnn.apply, params=params, tx=tx)
   return state,batch_stats
 
@@ -104,7 +104,7 @@ def test(state, batch_stats,batch,logits):
     label=np.array(label)
     if y.shape!=label.shape:
       print(y.shape,label.shape)
-    accuracy += jnp.sum(y == label)  
+    accuracy += np.sum(y == label)  
     total+=label_len
     # print(accuracy,y,label)
   return accuracy,label_len

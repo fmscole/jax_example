@@ -53,48 +53,9 @@ class CRNN(nn.Module):
     # x=x.reshape(x.shape[0],-1)
     x=nn.Dense(features=self.class_nums)(x)   
     
-    # x=nn.softmax(x)
+    x=nn.softmax(x)
     # print(x.shape)
     return x
-
-
-
-
-# class SimpleScan(nn.Module):
-#     @nn.compact
-#     def __call__(self, x,is_training:bool=True):
-#         LSTM = nn.scan(nn.LSTMCell,
-#                     variable_broadcast="params",
-#                     split_rngs={"params": False},
-#                     in_axes=2,
-#                     out_axes=2)    
-        
-#         x = nn.Conv(features=32, kernel_size=(3,))(x)
-#         y = nn.BatchNorm(use_running_average=not is_training)(x)
-#         x = nn.relu(x)      
-#         x = nn.avg_pool(x, window_shape=(2, ), strides=(2, ))
-
-#         ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 100)
-#         ch, x=LSTM()(ch, x)
-                
-#         # xs=nn.Dropout(rate=0.2,deterministic=not is_training)(xs)
-
-#         ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 100)
-#         ch, x=LSTM()(ch, x)        
-        
-#         # # xs=nn.Dropout(rate=0.2,deterministic=not is_training)(xs)
-#         # ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 200)
-#         # ch, x=LSTM()(ch, x)
-        
-#         # # xs=nn.Dropout(rate=0.2,deterministic=not is_training)(xs)
-#         # ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 200)
-#         # ch, x=LSTM()(ch, x)
-#         # # xs=nn.Dropout(rate=0.2,deterministic=not is_training)(xs)
-#         # # xs = nn.BatchNorm(use_running_average=not is_training)(xs)
-
-#         x=x.reshape(x.shape[0],-1)
-#         x=nn.Dense(features=class_nums)(x)        
-#         return x
 
 if __name__ =="__main__":
     cnn = CRNN(class_nums=9)
