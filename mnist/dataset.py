@@ -13,7 +13,7 @@ import pandas as pd
 # import paddle
 
 
-data_root="/media/fms/E0702E72702E4F98/dataset/naowen/"
+data_root="/mnt/c/Users/fms/Downloads/naowen/"
 task=[1,2,3,4,5,6,7,8,9,10,11,12,13]
 # task=[1]
 # 读取数据
@@ -167,6 +167,7 @@ class LGBSequence(lightgbm.Sequence):
                         batch_size=1,
                         mode='train',xy="x"):
         self.batch_size = batch_size
+        self.train_len=5000
         self.xy=xy
         self.img = []
         self.label = []
@@ -182,7 +183,7 @@ class LGBSequence(lightgbm.Sequence):
             # 读train_images的数据
             for img,la in zip(self.train_images, self.train_label):
                 self.img.append(data_root+'Enrollment/'+img+'.mat')
-                self.label.append(np.array(int(la[4:]) - 1, dtype=np.int64))
+                self.label.append(int(la[4:]) - 1)
         elif self.mode == 'test':
             for img in self.test_images:
                 self.img.append(data_root+'Testing/'+img+'.mat')
@@ -196,6 +197,8 @@ class LGBSequence(lightgbm.Sequence):
         data = scio.loadmat(eeg_path)
         return data['epoch_data']
     def getY(self):
+        if self.mode == 'train':
+            return self.label[0:self.train_len]
         return self.label
 
     def __getitem__(self, index):
@@ -218,11 +221,6 @@ class LGBSequence(lightgbm.Sequence):
                 eeg_data=(eeg_data-data_min)/(data_max-data_min)
                 eeg_data=eeg_data.reshape(-1)
 
-            # if self.mode == 'test':
-            #     eeg_label=0
-            # else:
-            
-            # label = paddle.to_tensor(label)
             
             return eeg_data
         else:
@@ -230,11 +228,16 @@ class LGBSequence(lightgbm.Sequence):
             return eeg_label
 
     def __len__(self):
+        if self.mode == 'train':
+            return self.train_len
         return len(self.img)
 
 x_train_lgb = LGBSequence( mode='train',xy="x")
-y_train_lgb = LGBSequence( mode='train',xy="y")
+# y_train_lgb = LGBSequence( mode='train',xy="y")
 x_val_lgb = LGBSequence(mode='val',xy="x")
-y_val_lgb = LGBSequence(mode='val',xy="y")
+# y_val_lgb = LGBSequence(mode='val',xy="y")
 
-lgb_train = lightgbm.Dataset(x_train_lgb, y_train_lgb)
+# lgb_train = lightgbm.Dataset(x_train_lgb, y_train_lgb)
+if __name__=="__main__":
+    print(x_train_lgb.__len__())
+    print(x_train_lgb.getY())

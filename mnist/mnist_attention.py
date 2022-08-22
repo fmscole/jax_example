@@ -18,40 +18,17 @@ class CNN(nn.Module):
     x = nn.relu(x)
     x = nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
 
-    x = nn.Conv(features=128, kernel_size=(3, 3))(x)
-    x = nn.BatchNorm(use_running_average=not is_training)(x)
-    x = nn.relu(x)
-    x = nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
-
-    x = nn.Conv(features=512, kernel_size=(3, 3))(x)
-    x = nn.BatchNorm(use_running_average=not is_training)(x)
-    x = nn.relu(x)
-    x = nn.avg_pool(x, window_shape=(7, 7), strides=(1, 1))
-    # x = nn.Conv(features=64, kernel_size=(3, 3))(x)
-    # x = nn.BatchNorm(use_running_average=not is_training)(x)
-    # x = nn.relu(x)
-    # x = nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2))
-    # x = x.reshape((x.shape[0], -1))  # flatten
-    # x = nn.Dense(features=256)(x)
-
-    # q = nn.Dense(features=256)(x)    
-    # k = nn.Dense(features=256)(x)
-    # v = nn.Dense(features=256)(x)
-    # q = nn.relu(q)
-    # q=q*k
-    # k=q
-    # k=k*q
-    # v = nn.relu(v)
-
-    # k=x
-    # q=x
-    # v=x
     
-    # k=k.transpose(0,2,1,3)
-    # t=q*k/16
-    # s=nn.softmax(t,axis=2)    
-    # x=s*v
-    # x=jnp.max(x,axis=(2,3))
+    # x1=x
+    # q = nn.Dense(features=32)(x1)    
+    # k = nn.Dense(features=32)(x1)
+    # v = nn.Dense(features=32)(x1)
+    # bef=jnp.einsum("bmnk,bmjk->bnj",q,k)/8
+    # x3=nn.softmax(bef,axis=-1)
+    # x3=x3[...,None]
+    # aft=jnp.einsum("bmnk,bnjk->bmj",v,x3)
+    # x=aft
+
     # print(x.shape)
     x = x.reshape((x.shape[0], -1))
     x = nn.Dense(features=10)(x)
@@ -84,8 +61,8 @@ def update_model(state, grads):
 
 def get_datasets():
   with tf.device('/cpu:0'):
-    # ds_builder = tfds.builder('fashion_mnist')
-    ds_builder = tfds.builder('mnist')
+    ds_builder = tfds.builder('fashion_mnist')
+    # ds_builder = tfds.builder('mnist')
     ds_builder.download_and_prepare()
     train_ds = tfds.as_numpy(ds_builder.as_dataset(split='train', batch_size=-1))
     test_ds = tfds.as_numpy(ds_builder.as_dataset(split='test', batch_size=-1))
@@ -159,7 +136,7 @@ def train_and_evaluate() -> train_state.TrainState:
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
   
-  for epoch in range(1, num_epochs + 1):
+  for epoch in range(1, 100 + 1):
     rng, input_rng = jax.random.split(rng)
     state, train_loss, train_accuracy,batch_stats = train_epoch(state, train_ds,
                                                     batch_size=batch_size,
