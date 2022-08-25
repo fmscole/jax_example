@@ -41,13 +41,9 @@ def put_text(image, x, y, text, font, color=None):
 
 
 class Generator(Dataset):
-    def __init__(self, alpha, direction='horizontal'):
-        """
-
-        :param alpha: 所有字符
-        :param direction: 文字方向：horizontal|vertical
-        """
+    def __init__(self, alpha, direction='horizontal',is_train=True):        
         super(Generator, self).__init__()
+        self.is_train=is_train
         self.alpha = alpha
         self.direction = direction
         self.alpha_list = list(alpha)
@@ -154,8 +150,9 @@ class Generator(Dataset):
         font_idx = np.random.randint(len(self.font_path_list))
         font = self.font_list[size_idx][font_idx]
         font_path = self.font_path_list[font_idx]
+        font_chars=FONT_CHARS_DICT[font_path]
         # 在选中font字体的可见字符中随机选择target_len个字符
-        text = np.random.choice(FONT_CHARS_DICT[font_path], target_len)
+        text = np.random.choice(font_chars, target_len)
         text = ''.join(text)
         # 计算字体的w和h
         w, char_h = font.getsize(text)
@@ -197,7 +194,11 @@ class Generator(Dataset):
         return image, target, input_len, target_len
 
     def __len__(self):
-        return len(self.alpha) * 100
+        if self.is_train:
+            return 64*1000
+        else:
+            return 64*10
+
 
 
 def test_image_gen(direction='vertical'):
@@ -241,10 +242,17 @@ def numpy_collate(batch):
 
 data_set = Generator(cfg.word.get_all_words(), 'horizontal')
 train_sampler = torch.utils.data.RandomSampler(data_set)
-data_loader = DataLoader(data_set, batch_size=128, sampler=train_sampler,
-                             num_workers=8,collate_fn=numpy_collate)
+data_loader = DataLoader(data_set, batch_size=64, sampler=train_sampler,
+                             num_workers=4,collate_fn=numpy_collate)
+
+val_set = Generator(cfg.word.get_all_words(), 'horizontal',is_train=False)
+val_sampler = torch.utils.data.RandomSampler(val_set)
+val_loader = DataLoader(val_set, batch_size=64, sampler=val_sampler,
+                             num_workers=4,collate_fn=numpy_collate)
+
 if __name__ == '__main__':
-    test_image_gen('horizontal')
+    # test_image_gen('horizontal')
     # test_image_gen('vertical')
     # test_gen()
     # test_font_size()
+    print(data_set.gen_image())

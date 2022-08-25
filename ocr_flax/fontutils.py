@@ -18,10 +18,6 @@ word_set = set(cfg.word.get_all_words())
 
 
 def get_all_font_chars():
-    """
-
-    :return: font_chars_dict: dict{font_path:[visible chars]
-    """
     font_dir = os.path.join(os.path.dirname(__file__), 'fonts')
     font_path_list = [os.path.join(font_dir, font_name)
                       for font_name in os.listdir(font_dir)]

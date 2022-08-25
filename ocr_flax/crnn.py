@@ -36,25 +36,42 @@ class CRNN(nn.Module):
     x = nn.max_pool(x, window_shape=(2, 2), strides=(1, 2),padding="same") # [B,512,W/4,2]
     
     x = nn.Conv(features=512, kernel_size=(2, 2),padding="valid")(x)# [B,512,W/4,1]?
+    x = nn.BatchNorm(use_running_average=not is_training)(x)
     x = nn.relu(x)
     x=x.reshape(x.shape[0],x.shape[1],-1)
+    
     
     LSTM = nn.scan(nn.LSTMCell,
                     variable_broadcast="params",
                     split_rngs={"params": False},
                     in_axes=1,
-                    out_axes=1) 
+                    out_axes=1,reverse=False) 
+    LSTM_R = nn.scan(nn.LSTMCell,
+                    variable_broadcast="params",
+                    split_rngs={"params": False},
+                    in_axes=1,
+                    out_axes=1,reverse=True) 
+    
     ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
-    ch, x=LSTM()(ch, x)
-
+    ch, y1=LSTM()(ch, x)    
+    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
+    ch, y2=LSTM_R()(ch, x)  
+    
+    x=jnp.concatenate([y1,y2],axis=-1)
+    x= nn.BatchNorm(use_running_average=not is_training)(x)
+    x = nn.relu(x)
+    
     ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 512)
-    ch, x=LSTM()(ch, x)  
+    ch, y1=LSTM()(ch, x)    
+    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 512)
+    ch, y2=LSTM_R()(ch, x)  
+
+    x=jnp.concatenate([y1,y2],axis=-1)
+    x= nn.BatchNorm(use_running_average=not is_training)(x)
+    x = nn.relu(x)
     
-    # x=x.reshape(x.shape[0],-1)
-    x=nn.Dense(features=self.class_nums)(x)   
-    
-    x=nn.softmax(x)
-    # print(x.shape)
+
+    x=nn.Dense(features=self.class_nums)(x)  
     return x
 
 if __name__ =="__main__":

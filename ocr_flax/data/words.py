@@ -44,7 +44,7 @@ class Word(object):
         cur_dir = os.path.dirname(__file__)
         # f = codecs.open(os.path.join(cur_dir, 'chinese_word.txt'),
         #                 mode='r', encoding='utf-8')
-        f = codecs.open(os.path.join(cur_dir, 'char_std_5990.txt'),
+        f = codecs.open(os.path.join(cur_dir, 'simple.txt'),
                         mode='r', encoding='utf-8')
         lines = f.readlines()
         f.close()
@@ -74,7 +74,7 @@ class Word(object):
         # return words
         cur_dir = os.path.dirname(__file__)
         # f = codecs.open(os.path.join(cur_dir, 'all_words.txt'), mode='r', encoding='utf-8')
-        f = codecs.open(os.path.join(cur_dir, 'char_std_5990.txt'), mode='r', encoding='utf-8')
+        f = codecs.open(os.path.join(cur_dir, 'simple.txt'), mode='r', encoding='utf-8')
         lines = f.readlines()
         f.close()
         lines = [l.strip() for l in lines]
