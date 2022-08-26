@@ -58,8 +58,8 @@ class CRNN(nn.Module):
     ch, y2=LSTM_R()(ch, x)  
     
     x=jnp.concatenate([y1,y2],axis=-1)
-    x= nn.BatchNorm(use_running_average=not is_training)(x)
-    x = nn.relu(x)
+    # x= nn.BatchNorm(use_running_average=not is_training)(x)
+    # x = nn.relu(x)
     
     ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 512)
     ch, y1=LSTM()(ch, x)    
@@ -67,8 +67,8 @@ class CRNN(nn.Module):
     ch, y2=LSTM_R()(ch, x)  
 
     x=jnp.concatenate([y1,y2],axis=-1)
-    x= nn.BatchNorm(use_running_average=not is_training)(x)
-    x = nn.relu(x)
+    # x= nn.BatchNorm(use_running_average=not is_training)(x)
+    # x = nn.relu(x)
     
 
     x=nn.Dense(features=self.class_nums)(x)  

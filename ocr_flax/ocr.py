@@ -47,13 +47,13 @@ def apply_model(state, batch,old_batch_stats):
     # loss=jnp.log(loss)
     
 
-    # weight_penalty_params = jax.tree_leaves(params)
-    # weight_decay = 0.0001
-    # weight_l2 = sum(jnp.sum(x ** 2)
-    #                  for x in weight_penalty_params
-    #                  if x.ndim > 1)
-    # weight_penalty = weight_decay * 0.5 * weight_l2
-    # loss = loss + weight_penalty
+    weight_penalty_params = jax.tree_util.tree_leaves(params)
+    weight_decay = 0.0001
+    weight_l2 = sum(jnp.sum(x ** 2)
+                     for x in weight_penalty_params
+                     if x.ndim > 1)
+    weight_penalty = weight_decay * 0.5 * weight_l2
+    loss = loss + weight_penalty
 
     return loss, (logits,mutated_vars['batch_stats'])    
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
@@ -81,7 +81,8 @@ def create_train_state(rng):
 
   steps_per_epoch=60000//batch_size
   schedule=create_learning_rate_fn(base_learning_rate=0.00000001,steps_per_epoch=steps_per_epoch)
-  tx = optax.sgd(learning_rate=schedule,momentum= 0.90)
+  # tx = optax.sgd(learning_rate=schedule,momentum= 0.90)
+  tx = optax.adagrad(learning_rate=0.01)
   state=train_state.TrainState.create(apply_fn=crnn.apply, params=params, tx=tx)
   return state,batch_stats
 
@@ -155,11 +156,12 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
     
     epoch_loss.append(loss)
     train_loss = np.mean(epoch_loss)
-    if i% 20==0:
+    if i% 200==0:
       accuracy,total=acc_count_fun(logits,target,target_len)
       acc_count+=accuracy
       acc_total+=total
-      print(f"({loss:0.2f},{total},{acc_count/acc_total*len(data_set.alpha):0.2f})") 
+      p=accuracy/total if total>1 else 0
+      print(f"({loss:0.2f},{total},{p})") 
   
   train_loss = np.mean(epoch_loss)
   return state, train_loss,batch_stats
@@ -200,7 +202,7 @@ def train_and_evaluate() -> train_state.TrainState:
     print("")
     print(f"time:{time.time()-begin:0.2f}")
     accuracy,total=test(state, batch_stats,val_loader)
-    p=accuracy/total
+    p=accuracy/total if total>1 else 0
     if p>best :  
       best=p
       print("save to ",filename,p)

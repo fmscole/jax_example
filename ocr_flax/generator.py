@@ -195,7 +195,7 @@ class Generator(Dataset):
 
     def __len__(self):
         if self.is_train:
-            return 64*1000
+            return 64*10000
         else:
             return 64*10
 
