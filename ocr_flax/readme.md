@@ -1,5 +1,5 @@
 copy from https://github.com/yizt/crnn.pytorch  
-  
+                                            
 运行ocr.py即可，一个epoch之后就会见显著效果  
 optax_ctc_loss
 start：
