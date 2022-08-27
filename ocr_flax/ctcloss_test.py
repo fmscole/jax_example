@@ -3,12 +3,6 @@ import jax
 
 ninf =-1e30
 
-def _logsumexp(a, b):
-    a,b=jax.lax.cond(a < b,lambda a,b:(b,a),lambda a,b:(a,b),a,b)    
-    return a +np.log(1 + np.exp(b - a)) 
-def logsumexpv(a,b):
-    return jax.vmap(_logsumexp)(a,b)
-
 
 def insert_blank(labels, blank=0):
     new_labels=[blank]
@@ -26,8 +20,8 @@ def loop_for_i(st,t):
     c=pre_log_alpha[:-2]  
     c=np.pad(c,(2,0),mode="constant",constant_values=(ninf,ninf))
 
-    d= logsumexpv(a,b)   
-    e= logsumexpv(d,c+mask)
+    d= np.logaddexp(a,b)   
+    e= np.logaddexp(d,c+mask)
     f=np.dot(one_hot,log_y[t])
 
     next_log_alpha=e+f
@@ -39,8 +33,8 @@ def alpha(log_y, labels,target_len):
     T, V = log_y.shape
     L = len(labels)
     log_alpha = np.ones( L) * ninf
-    log_alpha=log_alpha.at[0, 0].set(log_y[0, labels[0]])
-    log_alpha=log_alpha.at[0, 1] .set(log_y[0, labels[1]])
+    log_alpha=log_alpha.at[0].set(log_y[0, labels[0]])
+    log_alpha=log_alpha.at[1] .set(log_y[0, labels[1]])
     lscan=np.array(range(L))
     tscan=np.array(range(1,T))
 
@@ -63,6 +57,7 @@ def ctcloss(logits, targets,target_len):
 if __name__ =="__main__":
     import optax
     import numpy
+    import time
     from jax_loss  import jax_ctc_loss
     # logits=numpy.random.random((1,127,5990))
     # logits=jax.nn.softmax(logits)
@@ -75,13 +70,20 @@ if __name__ =="__main__":
     # targets=numpy.pad(targets,pad_width=((0,0),(0,6)))
     print(targets)
     target_len=numpy.array([5])
-    losss=ctcloss(logits, targets,target_len)
-    
-    print(losss)
+    start=time.time()
+    for i in range(1000):
+        losss=ctcloss(logits, targets,target_len)    
+        print(losss,end="")
 
-    logit_paddings=np.zeros(logits.shape[:2])
-    label_paddings=np.where(targets>0,0.0,1.0)
-    print(optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings))
+    print(time.time()-start)
+
+    
+    # logit_paddings=np.zeros(logits.shape[:2])
+    # label_paddings=np.where(targets>0,0.0,1.0)
+    # start=time.time()
+    # for i in range(100):
+    #     print(optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings),end="")
+    # print(time.time()-start)
 
     pass
 

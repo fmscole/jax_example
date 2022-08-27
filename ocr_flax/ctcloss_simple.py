@@ -64,27 +64,36 @@ def ctcloss(logits, targets,target_len):
 if __name__ =="__main__":
     import optax
     import numpy
+    import time
     from jax_loss  import jax_ctc_loss
     # logits=numpy.random.random((1,127,5990))
     # logits=jax.nn.softmax(logits)
-    logits=numpy.ones((1,200,26))
+    logits=numpy.ones((1,20,26))
+    # logits=np.exp(logits)
     # logits=jax.nn.softmax(logits)
 
     # targets=numpy.random.randint(1,26,(1,20))
-    targets=numpy.array([[1,2,2,3,4]])
+    targets=numpy.array([[1,2,2,2,2]])
     # targets=numpy.pad(targets,pad_width=((0,0),(0,6)))
     print(targets)
     target_len=numpy.array([5])
-    losss=ctcloss(logits, targets,target_len)
-    print(losss)
-    # print(losss[100])
-    logit_paddings=np.zeros(logits.shape[:2])
-    label_paddings=np.where(targets>0,0.0,1.0)
-    # # print(label_paddings)
-    print(optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings))
-    # jax_ctc_loss(logits[0], targets[0], input_lengths=9, target_lengths=4, blank=0)
+    start=time.time()
+    for i in range(1000):
+        losss=ctcloss(logits, targets,target_len)    
+        print(losss,end="")
+
+    print(time.time()-start)
+
+    
+    # logit_paddings=np.zeros(logits.shape[:2])
+    # label_paddings=np.where(targets>0,0.0,1.0)
+    # start=time.time()
+    # for i in range(100):
+    #     print(optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings),end="")
+    # print(time.time()-start)
 
     pass
+
 
 
     
