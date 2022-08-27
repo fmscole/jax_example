@@ -28,13 +28,19 @@ def remove_blank(labels, blank=0):
             previous = l
     new_labels = [l for l in new_labels if l != blank]
     return new_labels
-
+def insert_blank(labels, blank=0):
+    new_labels=[blank]
+    for l in labels:
+        new_labels += [l, blank]
+    new_labels=np.array(new_labels)
+    return new_labels
 @jax.jit
 def apply_model(state, batch,old_batch_stats):
   def loss_fn(params,old_batch_stats):
     images, target, input_len, target_len=batch
     
     images=images.transpose(0,2,3,1)
+    
     logits,mutated_vars = state.apply_fn({'params': params,"batch_stats":old_batch_stats}, images,is_training=True, mutable=['batch_stats'])
     
     # label_paddings=jnp.where(target>0,0.0,1.0)

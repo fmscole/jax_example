@@ -30,7 +30,7 @@ def loop_for_i(st,t):
 def ctcloss(log_y, labels,target_len):
     log_y=jax.nn.log_softmax(log_y)
     target_len=target_len*2+1
-    
+    labels=np.array([insert_blank(list(i)) for i in labels ])
     B,T, V = log_y.shape
     labels=np.array(labels)
     one_hot=jax.nn.one_hot(labels,log_y.shape[-1])
@@ -55,7 +55,7 @@ def ctcloss(log_y, labels,target_len):
     return log_alpha
 
 @jax.jit
-def ctcloss2(logits,logit_paddings,labels,label_paddings):
+def ctcloss2(logits,logit_paddings,targets,label_paddings):
     return optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings)
 
 if __name__ =="__main__":
@@ -71,16 +71,16 @@ if __name__ =="__main__":
 
     targets=numpy.random.randint(1,26,(100,20))
     # targets=numpy.array([[1,2,2,2,2]])
-    labels=np.array([insert_blank(list(i)) for i in targets ])
-    labels=numpy.pad(labels,pad_width=((0,0),(0,60)))
+    targets=np.array([insert_blank(list(i)) for i in targets ])
+    targets=numpy.pad(targets,pad_width=((0,0),(0,60)))
     # print(labels)
-    target_len=numpy.array([20])
+    target_len=numpy.array([[20] for i in range(100)])
 
-    losss=ctcloss(logits, labels,target_len)
+    losss=ctcloss(logits, targets,target_len)
     
     start=time.time()
     for i in range(100):
-        losss=ctcloss(logits, labels,target_len)   
+        losss=ctcloss(logits, targets,target_len)   
         print(losss[0],end="")
     print("")
     print(time.time()-start)

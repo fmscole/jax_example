@@ -70,13 +70,13 @@ class CRNN(nn.Module):
     # # x= nn.BatchNorm(use_running_average=not is_training)(x)
     # # x = nn.relu(x)
     
-    q = nn.Dense(features=512)(x)    
-    k = nn.Dense(features=512)(x)
-    v = nn.Dense(features=512)(x)
+    # q = nn.Dense(features=512)(x)    
+    # k = nn.Dense(features=512)(x)
+    # v = nn.Dense(features=512)(x)
     
-    bef=jnp.einsum("btk,bsk->bts",q,k)/32
-    x3=nn.softmax(bef,axis=-1)    
-    x=jnp.einsum("btk,bts->bsk",v,x3)
+    # bef=jnp.einsum("btk,bsk->bts",q,k)/32
+    # x3=nn.softmax(bef,axis=-1)    
+    # x=jnp.einsum("btk,bts->bsk",v,x3)
     
     x=nn.Dense(features=self.class_nums)(x)  
     return x
