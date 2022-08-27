@@ -37,13 +37,13 @@ def apply_model(state, batch,old_batch_stats):
     images=images.transpose(0,2,3,1)
     logits,mutated_vars = state.apply_fn({'params': params,"batch_stats":old_batch_stats}, images,is_training=True, mutable=['batch_stats'])
     
-    # label_paddings=jnp.where(target>0,0.0,1.0)
-    # logit_paddings=jnp.zeros(logits.shape[0:2])
-    # loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
-    # loss=jnp.mean(loss)
+    label_paddings=jnp.where(target>0,0.0,1.0)
+    logit_paddings=jnp.zeros(logits.shape[0:2])
+    loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
+    loss=jnp.mean(loss)
     
-    loss=ctcloss(logits,target,target_len)
-    loss=-jnp.mean(loss)
+    # loss=ctcloss(logits,target,target_len)
+    # loss=-jnp.mean(loss)
     
 
     # weight_penalty_params = jax.tree_util.tree_leaves(params)
@@ -148,6 +148,7 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
   epoch_loss = []
   acc_count=0
   acc_total=0
+  start=time.time()
   for i,batch in enumerate(train_ds):
     image_i, target, input_len, target_len=batch
     grads, loss, batch_stats,logits= apply_model(state, batch,batch_stats)    
@@ -161,6 +162,8 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
       acc_total+=total
       p=accuracy/total if total>1 else 0
       print(f"({loss:0.2f},{total},{p})") 
+      print(time.time()-start)
+      start=time.time()
   
   train_loss = np.mean(epoch_loss)
   return state, train_loss,batch_stats

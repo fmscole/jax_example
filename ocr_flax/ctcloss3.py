@@ -6,7 +6,8 @@ ninf =-1e30
 def _logsumexp(a, b):
     a,b=jax.lax.cond(a < b,lambda a,b:(b,a),lambda a,b:(a,b),a,b)    
     return a +np.log(1 + np.exp(b - a)) 
-
+def logsumexpv(a,b):
+    return jax.vmap(_logsumexp)(a,b)
 # def logsumexp(*args):
 #     res = args[0]
 #     for e in args[1:]:
@@ -37,10 +38,22 @@ def loop_for_fun(state,i):
     log_alpha=log_alpha.at[t, i].set( a + log_y[t, s])#
     return (t,log_alpha,log_y,labels),i
 def loop_for_i(st,t):
-    lscan,target_len,log_alpha,log_y,labels=st
-    state=(t,log_alpha,log_y,labels)    
-    (t,log_alpha,log_y,labels),_=jax.lax.scan(loop_for_fun,state,lscan)
-    return (lscan,target_len,log_alpha,log_y,labels),t
+    lscan,target_len,log_alpha,log_y,labels,one_hot,mask=st
+       
+    a = log_alpha[t - 1, :] 
+    b = a[:-1] 
+    b=np.pad(b,(1,0))
+
+    c=a[:-2] 
+    c=np.pad(c,(2,0))
+
+    e= logsumexpv(a=a,b=b)   
+    e= logsumexpv(a=e,b=c+mask)
+    f=np.dot(one_hot,log_y[t])
+    log_alpha=log_alpha.at[t].set(e+f)
+    # state=(t,log_alpha,log_y,labels) 
+    # (t,log_alpha,log_y,labels),_=jax.lax.scan(loop_for_fun,state,lscan)
+    return (lscan,target_len,log_alpha,log_y,labels,one_hot,mask),t
 def alpha(log_y, labels,target_len):
     log_y=jax.nn.log_softmax(log_y)
     target_len=target_len*2+1
@@ -52,9 +65,17 @@ def alpha(log_y, labels,target_len):
     log_alpha=log_alpha.at[0, 1] .set(log_y[0, labels[1]])
     lscan=np.array(range(L))
     tscan=np.array(range(1,T))
-    state=(lscan,target_len,log_alpha,log_y,labels)
+
+    labels=np.array(labels)
+    mask=np.array(labels[:-2]==labels[2:],np.int32)
+    mask=1-mask
+    mask=np.pad(mask,(2,0))
+    mask=np.where(mask>0,0,ninf)
+    one_hot=jax.nn.one_hot(labels,log_y.shape[-1])
+
+    state=(lscan,target_len,log_alpha,log_y,labels,one_hot,mask)
     
-    (lscan,target_len,log_alpha,log_y,labels),_=jax.lax.scan(loop_for_i,state,tscan)            
+    (lscan,target_len,log_alpha,log_y,labels,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan)            
     return log_alpha[-1,target_len-1]+log_alpha[-1,target_len-2]
     return log_alpha
 @jax.jit
@@ -68,7 +89,7 @@ if __name__ =="__main__":
     # logits=numpy.random.random((1,127,5990))
     # logits=jax.nn.softmax(logits)
     logits=numpy.ones((1,20,26))
-    logits=jax.nn.softmax(logits)
+    # logits=jax.nn.softmax(logits)
 
     # targets=numpy.random.randint(1,26,(1,20))
     targets=numpy.array([[1,2,2,3,4]])
@@ -81,7 +102,9 @@ if __name__ =="__main__":
     logit_paddings=np.zeros(logits.shape[:2])
     label_paddings=np.where(targets>0,0.0,1.0)
     # # print(label_paddings)
-    # print(optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings))
+    print(optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings))
     # jax_ctc_loss(logits[0], targets[0], input_lengths=9, target_lengths=4, blank=0)
+
+    pass
 
     
