@@ -81,7 +81,7 @@ def create_train_state(rng):
   steps_per_epoch=60000//batch_size
   schedule=create_learning_rate_fn(base_learning_rate=0.00000001,steps_per_epoch=steps_per_epoch)
   # tx = optax.sgd(learning_rate=schedule,momentum= 0.90)
-  tx = optax.adagrad(learning_rate=0.01)
+  tx = optax.adagrad(learning_rate=0.1)
   state=train_state.TrainState.create(apply_fn=crnn.apply, params=params, tx=tx)
   return state,batch_stats
 
