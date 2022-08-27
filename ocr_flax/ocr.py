@@ -52,7 +52,7 @@ def apply_model(state, batch,old_batch_stats):
     #                  for x in weight_penalty_params
     #                  if x.ndim > 1)
     # weight_penalty = weight_decay * 0.5 * weight_l2
-    # loss = loss + weight_penalty
+    # loss =  weight_penalty
 
     return loss, (logits,mutated_vars['batch_stats'])    
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)

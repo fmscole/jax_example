@@ -52,25 +52,32 @@ class CRNN(nn.Module):
                     in_axes=1,
                     out_axes=1,reverse=True) 
     
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
-    ch, y1=LSTM()(ch, x)    
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
-    ch, y2=LSTM_R()(ch, x)  
+    # ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
+    # ch, y1=LSTM()(ch, x)    
+    # ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
+    # ch, y2=LSTM_R()(ch, x)  
     
-    x=jnp.concatenate([y1,y2],axis=-1)
-    # x= nn.BatchNorm(use_running_average=not is_training)(x)
-    # x = nn.relu(x)
+    # x=jnp.concatenate([y1,y2],axis=-1)
+    # # x= nn.BatchNorm(use_running_average=not is_training)(x)
+    # # x = nn.relu(x)
     
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 512)
-    ch, y1=LSTM()(ch, x)    
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 512)
-    ch, y2=LSTM_R()(ch, x)  
+    # ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 512)
+    # ch, y1=LSTM()(ch, x)    
+    # ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 512)
+    # ch, y2=LSTM_R()(ch, x)  
 
-    x=jnp.concatenate([y1,y2],axis=-1)
-    # x= nn.BatchNorm(use_running_average=not is_training)(x)
-    # x = nn.relu(x)
+    # x=jnp.concatenate([y1,y2],axis=-1)
+    # # x= nn.BatchNorm(use_running_average=not is_training)(x)
+    # # x = nn.relu(x)
     
-
+    q = nn.Dense(features=512)(x)    
+    k = nn.Dense(features=512)(x)
+    v = nn.Dense(features=512)(x)
+    
+    bef=jnp.einsum("btk,bsk->bts",q,k)/32
+    x3=nn.softmax(bef,axis=-1)    
+    x=jnp.einsum("btk,bts->bsk",v,x3)
+    
     x=nn.Dense(features=self.class_nums)(x)  
     return x
 
