@@ -14,11 +14,11 @@ import pickle
 import os
 from crnn import CRNN
 from cann import CANN
-from ctnn import CTNN
+# from ctnn import CTNN
 from config import cfg
-from ctcloss_enhance import ctcloss
+# from ctcloss_enhance import ctcloss
 # from ctcloss_simple import ctcloss
-# from ctcloss_fast import ctcloss
+from ctcloss_fast import ctcloss
 batch_size=100
 num_epochs=100
 class_nums=95
@@ -46,13 +46,13 @@ def apply_model(state, batch,old_batch_stats):
     
     logits,mutated_vars = state.apply_fn({'params': params,"batch_stats":old_batch_stats}, images,is_training=True, mutable=['batch_stats'])
     
-    label_paddings=jnp.where(target>0,0.0,1.0)
-    logit_paddings=jnp.zeros(logits.shape[0:2])
-    loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
-    loss=jnp.mean(loss)
+    # label_paddings=jnp.where(target>0,0.0,1.0)
+    # logit_paddings=jnp.zeros(logits.shape[0:2])
+    # loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
+    # loss=jnp.mean(loss)
     
-    # loss=ctcloss(logits,target,target_len)
-    # loss=-jnp.mean(loss)
+    loss=ctcloss(logits,target,target_len)
+    loss=-jnp.mean(loss)
     
 
     # weight_penalty_params = jax.tree_util.tree_leaves(params)
@@ -73,7 +73,7 @@ def update_model(state, grads):
   return state.apply_gradients(grads=grads)
 
 def create_train_state(rng):
-  crnn = CTNN(class_nums=len(data_set.alpha))
+  crnn = CRNN(class_nums=len(data_set.alpha))
   variables=crnn.init(rng, jnp.ones([100, 512, 32,1]))
   params = variables['params']
   batch_stats=variables['batch_stats']
@@ -190,7 +190,7 @@ def train_and_evaluate() -> train_state.TrainState:
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
   best=0
-  filename="ctnn_best.npy"
+  filename="crnn_best.npy"
   if os.path.exists(filename):
     weight={"state":state,"batch_stats":batch_stats,"p":best}
     weight=load_weights(weight, filename)
