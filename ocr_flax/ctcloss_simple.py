@@ -18,11 +18,7 @@ def loop_for_insert_blank(i,state):
     return (new_labels,labels,blank)
 
 def insert_blank(labels, blank=0):
-    
-    # n=len(labels)
-    # new_labels =np.zeros((2*n+1,)) 
-    # state=(new_labels,labels,blank)
-    # new_labels,labels,blank=jax.lax.fori_loop(0,n,loop_for_insert_blank,state)
+
     new_labels=[blank]
     for l in labels:
         new_labels += [l, blank]
@@ -55,8 +51,7 @@ def alpha(log_y, labels,target_len):
     state=(lscan,target_len,log_alpha,log_y,labels)
     
     (lscan,target_len,log_alpha,log_y,labels),_=jax.lax.scan(loop_for_i,state,tscan)            
-    return log_alpha[-1,target_len-1]+log_alpha[-1,target_len-2]
-    return log_alpha
+    return np.logaddexp(log_alpha[-1,target_len-1],log_alpha[-1,target_len-2])
 @jax.jit
 def ctcloss(logits, targets,target_len):
     return jax.vmap(alpha, in_axes=(0), out_axes=0)(logits, targets,target_len)

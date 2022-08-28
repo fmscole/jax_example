@@ -3,12 +3,6 @@ import jax
 
 ninf =-1e30
 
-def _logsumexp(a, b):
-    a,b=jax.lax.cond(a < b,lambda a,b:(b,a),lambda a,b:(a,b),a,b)    
-    return a +np.log(1 + np.exp(b - a)) 
-def logsumexpv(a,b):
-    return jax.vmap(_logsumexp)(a,b)
-
 
 def insert_blank(labels, blank=0):
     new_labels=[blank]
@@ -18,7 +12,7 @@ def insert_blank(labels, blank=0):
     return new_labels
 
 def loop_for_i(st,t):
-    lscan,target_len,log_alpha,log_y,labels,one_hot,mask=st       
+    log_alpha,log_y,one_hot,mask=st       
     a = log_alpha[t-1, :] 
     b = log_alpha[t-1, :-1] 
     b=np.pad(b,(1,0),mode="constant",constant_values=(ninf,ninf))
@@ -30,17 +24,16 @@ def loop_for_i(st,t):
     f=np.dot(one_hot,log_y[t])
 
     log_alpha=log_alpha.at[t].set(e+f)
-    return (lscan,target_len,log_alpha,log_y,labels,one_hot,mask),t
+    return (log_alpha,log_y,one_hot,mask),t
 def alpha(log_y, labels,target_len):
     log_y=jax.nn.log_softmax(log_y)
-    target_len=target_len*2+1
+    
     labels=np.array(insert_blank(list(labels)))
     T, V = log_y.shape
     L = len(labels)
     log_alpha = np.ones([T, L]) * ninf
     log_alpha=log_alpha.at[0, 0].set(log_y[0, labels[0]])
     log_alpha=log_alpha.at[0, 1] .set(log_y[0, labels[1]])
-    lscan=np.array(range(L))
     tscan=np.array(range(1,T))
 
     labels=np.array(labels)
@@ -50,13 +43,19 @@ def alpha(log_y, labels,target_len):
     mask=np.where(mask>0,0,ninf)
     one_hot=jax.nn.one_hot(labels,log_y.shape[-1])
 
-    state=(lscan,target_len,log_alpha,log_y,labels,one_hot,mask)
+    state=(log_alpha,log_y,one_hot,mask)
     
-    (lscan,target_len,log_alpha,log_y,labels,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan) 
-    return _logsumexp(log_alpha[-1,target_len-1],log_alpha[-1,target_len-2])
+    (log_alpha,log_y,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan) 
+
+    target_len=target_len*2+1
+    return np.logaddexp(log_alpha[-1,target_len-1],log_alpha[-1,target_len-2])
 @jax.jit
 def ctcloss(logits, targets,target_len):
     return jax.vmap(alpha, in_axes=(0), out_axes=0)(logits, targets,target_len)
+
+@jax.jit
+def ctcloss2(logits,logit_paddings,targets,label_paddings):
+    return optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings)
 
 if __name__ =="__main__":
     import optax
@@ -64,33 +63,32 @@ if __name__ =="__main__":
     import time
     from jax_loss  import jax_ctc_loss
     logits=numpy.random.random((100,127,5990))
-    # logits=jax.nn.softmax(logits)
-    # logits=numpy.ones((1,20,26))
-    # logits=np.exp(logits)
-    # logits=jax.nn.softmax(logits)
 
     targets=numpy.random.randint(1,26,(100,20))
-    # targets=numpy.array([[1,2,2,2,2]])
     targets=np.array([insert_blank(list(i)) for i in targets ])
     targets=numpy.pad(targets,pad_width=((0,0),(0,60)))
-    # print(labels)
-    target_len=numpy.array([[20] for i in range(100)])
+
+    target_len=numpy.array([20 for i in range(100)])
+
+    losss=ctcloss(logits, targets,target_len)
+    
     start=time.time()
     for i in range(100):
-        losss=ctcloss(logits, targets,target_len)    
-        print(losss[0],end="")
-
+        losss=ctcloss(logits, targets,target_len)   
+        print(losss[0],end=" ")
+    print("")
     print(time.time()-start)
 
     
     logit_paddings=np.zeros(logits.shape[:2])
     label_paddings=np.where(targets>0,0.0,1.0)
+    ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
 
-    # start=time.time()
-    # for i in range(100):
-    #     print(optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings),end="")
-    # print(time.time()-start)
-
-    pass
+    start=time.time()
+    for i in range(100):
+        l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
+        print(l[0],end=" ")
+    print("")
+    print(time.time()-start)
 
     

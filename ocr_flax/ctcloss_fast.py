@@ -3,20 +3,6 @@ import jax
 
 ninf =-1e31
 
-def _logsumexp(a, b):
-    a,b=jax.lax.cond(a < b,lambda a,b:(b,a),lambda a,b:(a,b),a,b)    
-    return a +np.log(1 + np.exp(b - a)) 
-# def logsumexpv(a,b):
-#     a_=[[j for j in i] for i in a]
-#     b_=[[j for j in i] for i in b]
-#     c=jax.tree_util.tree_map(_logsumexp,a_,b_)
-#     c=np.array(c)
-#     return c
-def logsumexpv(a,b):
-    return jax.vmap(_logsumexp)(a,b)
-def vlogsumexp(a,b):
-    return jax.vmap(logsumexpv)(a,b)
-
 def insert_blank(labels, blank=0):
     new_labels=[blank]
     for l in labels:
@@ -54,16 +40,14 @@ def ctcloss(log_y, labels,target_len):
     pre_log_alpha=np.pad(pre_log_alpha,((0,0),(0,L-2)),mode="constant",constant_values=ninf)
     
     tscan=np.array(range(1,T))
-
     
     mask=np.array(labels[:,:-2]==labels[:,2:],np.int32)
     mask=1-mask
     mask=np.pad(mask,((0,0),(2,0)))
     mask=np.where(mask>0,0,ninf)
     
-    
     state=(pre_log_alpha,log_y,one_hot,mask)
-    
+  
     (next_log_alpha,log_y,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan)  
 
     target_len=target_len*2+1
@@ -82,17 +66,12 @@ if __name__ =="__main__":
     import time
     from jax_loss  import jax_ctc_loss
     logits=numpy.random.random((100,127,5990))
-    # logits=jax.nn.softmax(logits)
-    # logits=numpy.ones((1,20,26))
-    # logits=np.exp(logits)
-    # logits=jax.nn.softmax(logits)
 
     targets=numpy.random.randint(1,26,(100,20))
-    # targets=numpy.array([[1,2,2,2,2]])
     targets=np.array([insert_blank(list(i)) for i in targets ])
     targets=numpy.pad(targets,pad_width=((0,0),(0,60)))
-    # print(labels)
-    target_len=numpy.array([[20] for i in range(100)])
+
+    target_len=numpy.array([20 for i in range(100)])
 
     losss=ctcloss(logits, targets,target_len)
     
@@ -114,7 +93,4 @@ if __name__ =="__main__":
         print(l[0],end=" ")
     print("")
     print(time.time()-start)
-
-    pass
-
     
