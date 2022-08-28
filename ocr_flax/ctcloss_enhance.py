@@ -52,9 +52,8 @@ def alpha(log_y, labels,target_len):
 
     state=(lscan,target_len,log_alpha,log_y,labels,one_hot,mask)
     
-    (lscan,target_len,log_alpha,log_y,labels,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan)            
-    # return log_alpha[-1,target_len-1]+log_alpha[-1,target_len-2]
-    return log_alpha[-1,target_len-1]+log_alpha[-1,target_len-2]
+    (lscan,target_len,log_alpha,log_y,labels,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan) 
+    return _logsumexp(log_alpha[-1,target_len-1],log_alpha[-1,target_len-2])
 @jax.jit
 def ctcloss(logits, targets,target_len):
     return jax.vmap(alpha, in_axes=(0), out_axes=0)(logits, targets,target_len)

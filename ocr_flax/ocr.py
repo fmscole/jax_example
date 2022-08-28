@@ -13,9 +13,11 @@ from generator import data_set,data_loader,val_loader
 import pickle
 import os
 from crnn import CRNN
+from cann import CANN
 from config import cfg
-from ctcloss_fast import ctcloss
-
+from ctcloss_enhance import ctcloss
+# from ctcloss_simple import ctcloss
+# from ctcloss_fast import ctcloss
 batch_size=100
 num_epochs=100
 class_nums=95
@@ -70,7 +72,7 @@ def update_model(state, grads):
   return state.apply_gradients(grads=grads)
 
 def create_train_state(rng):
-  crnn = CRNN(class_nums=len(data_set.alpha))
+  crnn = CANN(class_nums=len(data_set.alpha))
   variables=crnn.init(rng, jnp.ones([100, 512, 32,1]))
   params = variables['params']
   batch_stats=variables['batch_stats']
@@ -87,7 +89,7 @@ def create_train_state(rng):
   steps_per_epoch=60000//batch_size
   schedule=create_learning_rate_fn(base_learning_rate=0.00000001,steps_per_epoch=steps_per_epoch)
   # tx = optax.sgd(learning_rate=schedule,momentum= 0.90)
-  tx = optax.adagrad(learning_rate=0.1)
+  tx = optax.adagrad(learning_rate=0.001)
   state=train_state.TrainState.create(apply_fn=crnn.apply, params=params, tx=tx)
   return state,batch_stats
 
@@ -168,7 +170,7 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
       acc_total+=total
       p=accuracy/total if total>1 else 0
       print(f"({loss:0.2f},{total},{p})") 
-      print(time.time()-start)
+      print("i:",i,time.time()-start)
       start=time.time()
   
   train_loss = np.mean(epoch_loss)
@@ -187,7 +189,7 @@ def train_and_evaluate() -> train_state.TrainState:
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
   best=0
-  filename="best.npy"
+  filename="attention_best.npy"
   if os.path.exists(filename):
     weight={"state":state,"batch_stats":batch_stats,"p":best}
     weight=load_weights(weight, filename)

@@ -6,7 +6,7 @@ import jax.numpy as jnp
 import numpy as np
 import pickle
 
-class CRNN(nn.Module):
+class CANN(nn.Module):
   class_nums:int
   @nn.compact
   def __call__(self, x,is_training:bool=True):   
@@ -39,33 +39,17 @@ class CRNN(nn.Module):
     x = nn.BatchNorm(use_running_average=not is_training)(x)
     x = nn.relu(x)
     x=x.reshape(x.shape[0],x.shape[1],-1)
+      
+    q = nn.Dense(features=512)(x)    
+    k = nn.Dense(features=512)(x)
+    v = nn.Dense(features=512)(x)
     
+    qk=jnp.einsum("btk,bsk->bts",q,k)/32
+    qk=nn.softmax(qk,axis=-1)    
+    x=jnp.einsum("btk,bts->bsk",v,qk)
     
-    LSTM = nn.scan(nn.LSTMCell,
-                    variable_broadcast="params",
-                    split_rngs={"params": False},
-                    in_axes=1,
-                    out_axes=1,reverse=False) 
-    LSTM_R = nn.scan(nn.LSTMCell,
-                    variable_broadcast="params",
-                    split_rngs={"params": False},
-                    in_axes=1,
-                    out_axes=1,reverse=True) 
-    
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
-    ch, y1=LSTM()(ch, x)    
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
-    ch, y2=LSTM_R()(ch, x)  
-    
-    x1=jnp.concatenate([y1,y2],axis=-1)
-    
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x1.shape[0],), 512)
-    ch, y2=LSTM()(ch, x1)    
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x1.shape[0],), 512)
-    ch, y3=LSTM_R()(ch, x1)  
-
-    x=jnp.concatenate([y3,y2],axis=-1) 
     x=nn.Dense(features=self.class_nums)(x)  
+  
     return x
 
 if __name__ =="__main__":
