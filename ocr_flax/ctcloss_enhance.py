@@ -15,9 +15,9 @@ def loop_for_i(st,t):
     log_alpha,log_y,one_hot,mask=st       
     a = log_alpha[t-1, :] 
     b = log_alpha[t-1, :-1] 
-    b=np.pad(b,(1,0),mode="constant",constant_values=(ninf,ninf))
+    b=np.pad(b,(1,0),mode="constant",constant_values=ninf)
     c=log_alpha[t-1, :-2]  
-    c=np.pad(c,(2,0),mode="constant",constant_values=(ninf,ninf))
+    c=np.pad(c,(2,0),mode="constant",constant_values=ninf)
 
     d= np.logaddexp(a,b)   
     e= np.logaddexp(d,c+mask)
@@ -28,23 +28,22 @@ def loop_for_i(st,t):
 def alpha(log_y, labels,target_len):
     log_y=jax.nn.log_softmax(log_y)
     
-    labels=np.array(insert_blank(list(labels)))
-    T, V = log_y.shape
-    L = len(labels)
+    labels=np.array(insert_blank(labels))
+    T, K = log_y.shape
+    L = labels.shape[-1]
     log_alpha = np.ones([T, L]) * ninf
     log_alpha=log_alpha.at[0, 0].set(log_y[0, labels[0]])
     log_alpha=log_alpha.at[0, 1] .set(log_y[0, labels[1]])
-    tscan=np.array(range(1,T))
+    
 
-    labels=np.array(labels)
     mask=np.array(labels[:-2]==labels[2:],np.int32)
     mask=1-mask
     mask=np.pad(mask,(2,0))
     mask=np.where(mask>0,0,ninf)
-    one_hot=jax.nn.one_hot(labels,log_y.shape[-1])
+    one_hot=jax.nn.one_hot(labels,K)
 
     state=(log_alpha,log_y,one_hot,mask)
-    
+    tscan=np.array(range(1,T))
     (log_alpha,log_y,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan) 
 
     target_len=target_len*2+1

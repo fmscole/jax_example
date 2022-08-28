@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
- @File    : generator.py
- @Time    : 2019/12/22 下午8:22
- @Author  : yizuotian
- @Description    :  中文数据生成器
-"""
 import random
 
 import cv2
@@ -102,7 +95,7 @@ class Generator(Dataset):
             i += 1
             x_shift += char_w
             y_shift = np.random.randint(0, h_margin)
-            # 如果下个字符超出图像，则退出
+            # 如果下个字符超出图像，则退�?
             if x_shift + char_w > self.im_w:
                 break
         return text[:i]
@@ -129,7 +122,7 @@ class Generator(Dataset):
             i += 1
             x_shift = np.random.randint(0, w_margin)
             y_shift += char_h
-            # 如果下个字符超出图像，则退出
+            # 如果下个字符超出图像，则退�?
             if y_shift + char_h > self.im_h:
                 break
         return text[:i]
@@ -151,7 +144,7 @@ class Generator(Dataset):
         font = self.font_list[size_idx][font_idx]
         font_path = self.font_path_list[font_idx]
         font_chars=FONT_CHARS_DICT[font_path]
-        # 在选中font字体的可见字符中随机选择target_len个字符
+        # 在选中font字体的可见字符中随机选择target_len个字�?
         text = np.random.choice(font_chars, target_len)
         text = ''.join(text)
         # 计算字体的w和h
@@ -163,10 +156,10 @@ class Generator(Dataset):
         draw = ImageDraw.Draw(im)
         color = tuple(random_color(105, 255))
         text = self.draw_text(draw, text, font, color, char_w, char_h)
-        target_len = len(text)  # target_len可能变小了
-        # 对应的类别
+        target_len = len(text)  # target_len可能变小�?
+        # 对应的类�?
         indices = np.array([self.alpha.index(c) for c in text])
-        # 转为灰度图
+        # 转为灰度�?
         image = np.array(im)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         # 亮度反转
@@ -180,7 +173,7 @@ class Generator(Dataset):
             image = np.transpose(image[:, :, np.newaxis], axes=(2, 1, 0))  # [H,W,C]=>[C,W,H]
         else:
             image = np.transpose(image[:, :, np.newaxis], axes=(2, 0, 1))  # [H,W,C]=>[C,H,W]
-        # 标准化
+        # 标准�?
         image = image.astype(np.float32) / 255.
         image -= 0.5
         image /= 0.5
@@ -242,7 +235,7 @@ def numpy_collate(batch):
 
 data_set = Generator(cfg.word.get_all_words(), 'horizontal')
 train_sampler = torch.utils.data.RandomSampler(data_set)
-data_loader = DataLoader(data_set, batch_size=32, sampler=train_sampler,
+data_loader = DataLoader(data_set, batch_size=150, sampler=train_sampler,
                              num_workers=4,collate_fn=numpy_collate)
 
 val_set = Generator(cfg.word.get_all_words(), 'horizontal',is_train=False)

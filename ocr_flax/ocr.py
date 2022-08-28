@@ -5,13 +5,14 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
-import tensorflow_datasets as tfds
-import tensorflow as tf 
+
+
 import time
 from torch.utils.data import DataLoader
 from generator import data_set,data_loader,val_loader
 import pickle
 import os
+from tqdm import tqdm, trange
 from crnn import CRNN
 from cann import CANN
 # from ctnn import CTNN
@@ -46,13 +47,13 @@ def apply_model(state, batch,old_batch_stats):
     
     logits,mutated_vars = state.apply_fn({'params': params,"batch_stats":old_batch_stats}, images,is_training=True, mutable=['batch_stats'])
     
-    # label_paddings=jnp.where(target>0,0.0,1.0)
-    # logit_paddings=jnp.zeros(logits.shape[0:2])
-    # loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
-    # loss=jnp.mean(loss)
+    label_paddings=jnp.where(target>0,0.0,1.0)
+    logit_paddings=jnp.zeros(logits.shape[0:2])
+    loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
+    loss=jnp.mean(loss)
     
-    loss=ctcloss(logits,target,target_len)
-    loss=-jnp.mean(loss)
+    # loss=ctcloss(logits,target,target_len)
+    # loss=-jnp.mean(loss)
     
 
     # weight_penalty_params = jax.tree_util.tree_leaves(params)

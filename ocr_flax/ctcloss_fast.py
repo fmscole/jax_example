@@ -39,15 +39,13 @@ def ctcloss(log_y, labels,target_len):
     pre_log_alpha=t0[:,0:2]
     pre_log_alpha=np.pad(pre_log_alpha,((0,0),(0,L-2)),mode="constant",constant_values=ninf)
     
-    tscan=np.array(range(1,T))
-    
     mask=np.array(labels[:,:-2]==labels[:,2:],np.int32)
     mask=1-mask
     mask=np.pad(mask,((0,0),(2,0)))
     mask=np.where(mask>0,0,ninf)
     
     state=(pre_log_alpha,log_y,one_hot,mask)
-  
+    tscan=np.array(range(1,T))
     (next_log_alpha,log_y,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan)  
 
     target_len=target_len*2+1
