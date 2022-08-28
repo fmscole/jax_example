@@ -49,10 +49,13 @@ def ctcloss(log_y, labels,target_len):
     (next_log_alpha,log_y,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan)  
 
     target_len=target_len*2+1
-    loss=jax.vmap(compute_loss)(next_log_alpha,target_len)
+    target_len1=target_len-1
+    target_len2=target_len-2
+    target_len1=jax.nn.one_hot(target_len1,L)
+    target_len2=jax.nn.one_hot(target_len2,L)
+    loss=np.logaddexp(next_log_alpha[target_len1],next_log_alpha[target_len2])
        
     return loss
-    return log_alpha
 
 @jax.jit
 def ctcloss2(logits,logit_paddings,targets,label_paddings):

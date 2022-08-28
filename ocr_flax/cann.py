@@ -53,5 +53,5 @@ class CANN(nn.Module):
     return x
 
 if __name__ =="__main__":
-    cnn = CRNN(class_nums=9)
+    cnn = CANN(class_nums=9)
     variables=cnn.init(jax.random.PRNGKey(0), jnp.ones([2,512, 32, 1]))
