@@ -16,7 +16,7 @@ def ctc_loss_with_forward_probs(logits,logit_paddings,labels,label_paddings,blan
     
     one_hot = jax.nn.one_hot(labels, num_classes=num_classes)  # [B, N, K]
     logprobs_char = jnp.einsum('btk,bnk->btn', logprobs, one_hot)   #非blank字符的概率值
-    logprobs_char = jnp.transpose(logprobs_char, (1, 0, 2))  # [T, B, N]
+    logprobs_char = jnp.transpose(logprobs_char, (1, 0, 2))  # [T, B, N],因为scan统一为axis=0为导轴
     #在每一个时间片段，logprobs_phi，logprobs_emit都是常数
 
     logalpha_blank_init = jnp.ones(
@@ -31,14 +31,19 @@ def ctc_loss_with_forward_probs(logits,logit_paddings,labels,label_paddings,blan
             [phi[:, :1], jnp.logaddexp(phi[:, 1:], added_score)], axis=-1)
 
     def loop_body(prev, x):
-        prev_blank, prev_char = prev
+        #每一个时间步，包括t=0
+        prev_blank, prev_char = prev # t-1时刻的alph值
+        #需要更新，动态计算的两个量
         # emit-to-phi epsilon transition, except if the next label is repetition
         prev_blank_orig = prev_blank
+        #不是交叉插入，只是把blank和 char接起来放在第一位
         prev_blank = update_phi_score(prev_blank, prev_char + log_epsilon * mask)
-
-        logprob_char, logprob_blank, pad = x
+        
+        logprob_char, logprob_blank, logit_paddings = x
 
         # phi-to-emit transition
+        #在原值计算中，先加后乘，在log域中反过来，先加再logaddexp，总之，减少复杂计算次数
+        #先加t-1时刻的i和i-2的值
         next_char = jnp.logaddexp(prev_blank[:, :-1] + logprob_char,
                                 prev_char + logprob_char)
         # self-loop transition
@@ -47,9 +52,9 @@ def ctc_loss_with_forward_probs(logits,logit_paddings,labels,label_paddings,blan
         next_blank = update_phi_score(
             next_blank, prev_char + logprob_blank + log_epsilon * (1.0 - mask))
 
-        pad = pad.reshape((batchsize, 1))
-        next_char = pad * prev_char + (1.0 - pad) * next_char
-        next_blank = pad * prev_blank_orig + (1.0 - pad) * next_blank
+        logit_paddings = logit_paddings.reshape((batchsize, 1))
+        next_char = logit_paddings * prev_char + (1.0 - logit_paddings) * next_char
+        next_blank = logit_paddings * prev_blank_orig + (1.0 - logit_paddings) * next_blank
 
         return (next_blank, next_char), (next_blank, next_char)
 
