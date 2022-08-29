@@ -15,7 +15,7 @@ import os
 from tqdm import tqdm, trange
 from crnn import CRNN
 from cann import CANN
-from ctnn import CTNN
+from ctnn import CARNN
 from config import cfg
 # from ctcloss_enhance import ctcloss
 # from ctcloss_simple import ctcloss
@@ -74,7 +74,7 @@ def update_model(state, grads):
   return state.apply_gradients(grads=grads)
 
 def create_train_state(rng):
-  crnn = CRNN(class_nums=len(data_set.alpha))
+  crnn = CARNN(class_nums=len(data_set.alpha))
   variables=crnn.init(rng, jnp.ones([100, 512, 32,1]))
   params = variables['params']
   batch_stats=variables['batch_stats']
@@ -191,7 +191,7 @@ def train_and_evaluate() -> train_state.TrainState:
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
   best=0
-  filename="ctnn_best.npy"
+  filename="carnn_best.npy"
   if os.path.exists(filename):
     weight={"state":state,"batch_stats":batch_stats,"p":best}
     weight=load_weights(weight, filename)
