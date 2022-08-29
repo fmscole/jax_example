@@ -47,10 +47,10 @@ def apply_model(state, batch,old_batch_stats):
     
     logits,mutated_vars = state.apply_fn({'params': params,"batch_stats":old_batch_stats}, images,is_training=True, mutable=['batch_stats'])
     
-    label_paddings=jnp.where(target>0,0.0,1.0)
-    logit_paddings=jnp.zeros(logits.shape[0:2])
-    loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
-    loss=jnp.mean(loss)
+    # label_paddings=jnp.where(target>0,0.0,1.0)
+    # logit_paddings=jnp.zeros(logits.shape[0:2])
+    # loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
+    # loss=jnp.mean(loss)
     
     # loss=ctcloss(logits,target,target_len)
     # loss=-jnp.mean(loss)
@@ -74,7 +74,7 @@ def update_model(state, grads):
   return state.apply_gradients(grads=grads)
 
 def create_train_state(rng):
-  crnn = CARNN(class_nums=len(data_set.alpha))
+  crnn = CANN(class_nums=len(data_set.alpha))
   variables=crnn.init(rng, jnp.ones([100, 512, 32,1]))
   params = variables['params']
   batch_stats=variables['batch_stats']
