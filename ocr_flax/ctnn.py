@@ -46,7 +46,7 @@ class CTNN(nn.Module):
     
     qk=jnp.einsum("btk,bsk->bts",q,k)/32
     qk=nn.softmax(qk,axis=-1)    
-    out1=jnp.einsum("btk,bts->bsk",v,qk)
+    x=jnp.einsum("btk,bts->bsk",v,qk)
 
 
     LSTM = nn.scan(nn.LSTMCell,
@@ -62,14 +62,14 @@ class CTNN(nn.Module):
     
     ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
     ch, y1=LSTM()(ch, x)    
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
+    # ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x.shape[0],), 256)
     ch, y2=LSTM_R()(ch, x)  
     
     x1=jnp.concatenate([y1,y2],axis=-1)
     
     ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x1.shape[0],), 512)
     ch, y2=LSTM()(ch, x1)    
-    ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x1.shape[0],), 512)
+    # ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x1.shape[0],), 512)
     ch, y3=LSTM_R()(ch, x1)  
 
     out2=jnp.concatenate([y3,y2],axis=-1) 
