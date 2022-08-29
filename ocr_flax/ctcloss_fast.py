@@ -1,7 +1,7 @@
 import jax.numpy as np
 import jax
 
-ninf =-1e31
+ninf =-1e30
 
 def insert_blank(labels, blank=0):
     new_labels=[blank]
@@ -9,48 +9,43 @@ def insert_blank(labels, blank=0):
         new_labels += [l, blank]
     new_labels=np.array(new_labels)
     return new_labels
-def compute_loss(log_alpha,i):
-    return np.logaddexp(log_alpha[i-1],log_alpha[i-2])
-def loop_for_i(st,t):
-    pre_log_alpha,log_y,one_hot,mask=st 
-      
-    a = pre_log_alpha 
-    b = pre_log_alpha[:,:-1] 
-    b=np.pad(b,((0,0),(1,0)),mode="constant",constant_values=ninf)
-    c=pre_log_alpha[:,:-2]  
-    c=np.pad(c,((0,0),(2,0)),mode="constant",constant_values=ninf)
-    
-    d= np.logaddexp(a,b)   
-    e= np.logaddexp(d,c+mask)
-    f=np.einsum("blk,bk->bl",one_hot,log_y[:,t])
-    next_log_alpha=e+f
-    return (next_log_alpha,log_y,one_hot,mask),t
 
 @jax.jit
 def ctcloss(log_y, labels,target_len):
-    log_y=jax.nn.log_softmax(log_y)
-    
-    labels=np.array([insert_blank(list(i)) for i in labels ])
+    log_y=jax.nn.log_softmax(log_y)    
+    labels=np.array([insert_blank(i) for i in labels ])
 
     B,T, K = log_y.shape
     B,L=labels.shape
+
     one_hot=jax.nn.one_hot(labels,K)
-    t0=np.einsum("blk,bk->bl",one_hot,log_y[:,0])
-    pre_log_alpha=t0[:,0:2]
-    pre_log_alpha=np.pad(pre_log_alpha,((0,0),(0,L-2)),mode="constant",constant_values=ninf)
+    logprobs=np.einsum("blk,btk->tbl",one_hot,log_y)
+
+    pre_log_alpha=np.ones((B,L))*ninf
+    pre_log_alpha=pre_log_alpha.at[:,0].set(0.0)
     
     mask=np.array(labels[:,:-2]==labels[:,2:],np.int32)
     mask=1-mask
     mask=np.pad(mask,((0,0),(2,0)))
     mask=np.where(mask>0,0,ninf)
     
-    state=(pre_log_alpha,log_y,one_hot,mask)
-    tscan=np.array(range(1,T))
-    (next_log_alpha,log_y,one_hot,mask),_=jax.lax.scan(loop_for_i,state,tscan)  
+    def loop_for_t(pre_log_alpha,t):
+        a = pre_log_alpha 
+        b = pre_log_alpha[:,:-1] 
+        b=np.pad(b,((0,0),(1,0)),mode="constant",constant_values=ninf)
+        c=pre_log_alpha[:,:-2]  
+        c=np.pad(c,((0,0),(2,0)),mode="constant",constant_values=ninf)
+        
+        d= np.logaddexp(a,b)   
+        e= np.logaddexp(d,c+mask)
+        next_log_alpha=e+t
+        return next_log_alpha,None
+
+    next_log_alpha,_=jax.lax.scan(loop_for_t,pre_log_alpha,logprobs)  
 
     target_len=target_len*2+1
-    loss=jax.vmap(compute_loss)(next_log_alpha,target_len)       
-    return loss
+    loss=jax.vmap(lambda log_alpha,i :np.logaddexp(log_alpha[i-1],log_alpha[i-2]))(next_log_alpha,target_len)       
+    return -loss
 
 @jax.jit
 def ctcloss2(logits,logit_paddings,targets,label_paddings):
@@ -64,7 +59,7 @@ if __name__ =="__main__":
     logits=numpy.random.random((100,127,5990))
 
     targets=numpy.random.randint(1,26,(100,20))
-    targets=np.array([insert_blank(list(i)) for i in targets ])
+    
     targets=numpy.pad(targets,pad_width=((0,0),(0,60)))
 
     target_len=numpy.array([20 for i in range(100)])
