@@ -190,7 +190,7 @@ class Generator(Dataset):
         if self.is_train:
             return 64*10000
         else:
-            return 64*10
+            return 64*100
 
 
 
