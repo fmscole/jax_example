@@ -52,8 +52,8 @@ def apply_model(state, batch,old_batch_stats):
     # loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
     # loss=jnp.mean(loss)
     
-    # loss=ctcloss(logits,target,target_len)
-    # loss=-jnp.mean(loss)
+    loss=ctcloss(logits,target,target_len)
+    loss=jnp.mean(loss)
     
 
     # weight_penalty_params = jax.tree_util.tree_leaves(params)
@@ -191,7 +191,7 @@ def train_and_evaluate() -> train_state.TrainState:
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
   best=0
-  filename="carnn_best.npy"
+  filename="ctc_fast_best.npy"
   if os.path.exists(filename):
     weight={"state":state,"batch_stats":batch_stats,"p":best}
     weight=load_weights(weight, filename)

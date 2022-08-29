@@ -50,7 +50,7 @@ def alpha(log_y, labels,target_len):
     return np.logaddexp(log_alpha[-1,target_len-1],log_alpha[-1,target_len-2])
 @jax.jit
 def ctcloss(logits, targets,target_len):
-    return jax.vmap(alpha, in_axes=(0), out_axes=0)(logits, targets,target_len)
+    return -jax.vmap(alpha, in_axes=(0), out_axes=0)(logits, targets,target_len)
 
 @jax.jit
 def ctcloss2(logits,logit_paddings,targets,label_paddings):
