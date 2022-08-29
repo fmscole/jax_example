@@ -8,8 +8,8 @@ def ctc_loss_with_forward_probs(logits,logit_paddings,labels,label_paddings,blan
     labellens = maxlabellen - jnp.sum(label_paddings, axis=1).astype(jnp.int32)
     
     # repeat[b, n] == 1.0 when label[b, n] == label[b, n+1].
-    repeat = (labels[:, :-1] == labels[:, 1:]).astype(jnp.float32)    #相邻重复mask ，比L少1   
-    repeat = jnp.pad(repeat, ((0, 0), (0, 1)))  #右端pad，保持形长度相同
+    mask = (labels[:, :-1] == labels[:, 1:]).astype(jnp.float32)    #相邻重复mask ，比L少1   
+    mask = jnp.pad(mask, ((0, 0), (0, 1)))  #右端pad，保持形长度相同
     
     logprobs_blank = logprobs[:, :, blank_id:blank_id + 1]  # [B, T, 1]    blank的概率值，为啥取这个名字
     logprobs_blank = jnp.transpose(logprobs_blank, (1, 0, 2))  # [T, B, 1]
@@ -34,7 +34,7 @@ def ctc_loss_with_forward_probs(logits,logit_paddings,labels,label_paddings,blan
         prev_blank, prev_char = prev
         # emit-to-phi epsilon transition, except if the next label is repetition
         prev_blank_orig = prev_blank
-        prev_blank = update_phi_score(prev_blank, prev_char + log_epsilon * repeat)
+        prev_blank = update_phi_score(prev_blank, prev_char + log_epsilon * mask)
 
         logprob_char, logprob_blank, pad = x
 
@@ -45,7 +45,7 @@ def ctc_loss_with_forward_probs(logits,logit_paddings,labels,label_paddings,blan
         next_blank = prev_blank + logprob_blank
         # emit-to-phi blank transition only when the next label is repetition
         next_blank = update_phi_score(
-            next_blank, prev_char + logprob_blank + log_epsilon * (1.0 - repeat))
+            next_blank, prev_char + logprob_blank + log_epsilon * (1.0 - mask))
 
         pad = pad.reshape((batchsize, 1))
         next_char = pad * prev_char + (1.0 - pad) * next_char
