@@ -235,7 +235,7 @@ def numpy_collate(batch):
 
 data_set = Generator(cfg.word.get_all_words(), 'horizontal')
 train_sampler = torch.utils.data.RandomSampler(data_set)
-data_loader = DataLoader(data_set, batch_size=200, sampler=train_sampler,
+data_loader = DataLoader(data_set, batch_size=150, sampler=train_sampler,
                              num_workers=4,collate_fn=numpy_collate)
 
 val_set = Generator(cfg.word.get_all_words(), 'horizontal',is_train=False)

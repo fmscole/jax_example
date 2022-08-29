@@ -52,7 +52,7 @@ def apply_model(state, batch,old_batch_stats):
     loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
     loss=jnp.mean(loss)
     
-    loss2=ctcloss(logits,target,input_len,target_len)
+    loss2=ctcloss(logits,target,input_len+2,target_len)
     loss2=jnp.mean(loss2)
     
 
@@ -64,7 +64,7 @@ def apply_model(state, batch,old_batch_stats):
     # weight_penalty = weight_decay * 0.5 * weight_l2
     # loss =  weight_penalty
 
-    return loss, (logits,mutated_vars['batch_stats'],loss2)    
+    return loss2, (logits,mutated_vars['batch_stats'],loss)    
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
   (loss, (logits,new_batch_stats,loss2)), grads = grad_fn(state.params,old_batch_stats)
   return grads, loss,new_batch_stats,logits,loss2
@@ -74,7 +74,7 @@ def update_model(state, grads):
   return state.apply_gradients(grads=grads)
 
 def create_train_state(rng):
-  crnn = CANN(class_nums=len(data_set.alpha))
+  crnn = CRNN(class_nums=len(data_set.alpha))
   variables=crnn.init(rng, jnp.ones([100, 512, 32,1]))
   params = variables['params']
   batch_stats=variables['batch_stats']

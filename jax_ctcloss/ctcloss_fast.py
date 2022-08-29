@@ -1,7 +1,7 @@
 import jax.numpy as np
 import jax
 
-ninf =-np.inf
+ninf =-1e5#-np.inf
 
 def insert_blank(labels, blank=0):
     new_labels=[blank]
@@ -44,7 +44,7 @@ def ctcloss(logits, labels,input_len,label_len):
         next_log_alpha=e+t
         return next_log_alpha,next_log_alpha
 
-    _,next_log_alpha_t=jax.lax.scan(loop_for_t,pre_log_alpha,logprobs)  
+    next_log_alpha,next_log_alpha_t=jax.lax.scan(loop_for_t,pre_log_alpha,logprobs)  
     next_log_alpha_t=next_log_alpha_t.transpose((1,0,2)) #(B,T,L)
     label_len=label_len*2+1
     
