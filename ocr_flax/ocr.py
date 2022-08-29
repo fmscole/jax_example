@@ -15,7 +15,7 @@ import os
 from tqdm import tqdm, trange
 from crnn import CRNN
 from cann import CANN
-from ctnn import CARNN
+from carnn import CARNN
 from config import cfg
 # from ctcloss_enhance import ctcloss
 # from ctcloss_simple import ctcloss

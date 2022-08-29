@@ -46,7 +46,7 @@ class CARNN(nn.Module):
     
     qk=jnp.einsum("btk,bsk->bts",q,k)/32
     qk=nn.softmax(qk,axis=-1)    
-    x=jnp.einsum("btk,bts->bsk",v,qk)
+    out1=jnp.einsum("btk,bts->bsk",v,qk)
 
 
     LSTM = nn.scan(nn.LSTMCell,
@@ -72,12 +72,14 @@ class CARNN(nn.Module):
     # ch = nn.LSTMCell.initialize_carry(jax.random.PRNGKey(0), (x1.shape[0],), 512)
     ch, y3=LSTM_R()(ch, x1)  
 
-    x=jnp.concatenate([y3,y2],axis=-1) 
+    out2=jnp.concatenate([y3,y2],axis=-1) 
+
+    x=jnp.concatenate([out1,out2],axis=-1) 
     
     x=nn.Dense(features=self.class_nums)(x)  
   
     return x
 
 if __name__ =="__main__":
-    cnn = CTNN(class_nums=9)
+    cnn = CARNN(class_nums=9)
     variables=cnn.init(jax.random.PRNGKey(0), jnp.ones([2,512, 32, 1]))
