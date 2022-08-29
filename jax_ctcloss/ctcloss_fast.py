@@ -58,7 +58,7 @@ if __name__ =="__main__":
     import numpy
     import time
     logits=numpy.random.random((100,127,5990))
-    input_len=np.array([19 for i in range(100)])
+    input_len=np.array([127 for i in range(100)])
 
     targets=numpy.random.randint(1,26,(100,20))
     target_len=np.array([20 for i in range(100)])
@@ -78,10 +78,10 @@ if __name__ =="__main__":
     # print(time.time()-start)
 
     
-    # logit_paddings=np.zeros(logits.shape[:2])
-    # label_paddings=np.where(targets>0,0.0,1.0)
-    # losss=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
-    # print(losss)
+    logit_paddings=np.zeros(logits.shape[:2])
+    label_paddings=np.where(targets>0,0.0,1.0)
+    losss=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
+    print(losss)
     # start=time.time()
     # for i in range(100):
     #     l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
