@@ -62,8 +62,9 @@ if __name__ =="__main__":
     import optax
     import numpy
     import time
+    n=100
     logits=numpy.random.random((100,127,5990))
-    input_len=np.array([127 for i in range(100)])
+    input_len=np.array([n for i in range(100)])
 
     targets=numpy.random.randint(1,26,(100,20))
     target_len=np.array([20 for i in range(100)])
@@ -82,9 +83,9 @@ if __name__ =="__main__":
         print(losss[0],end=" ")
     print("")
     print(time.time()-start)
-
     
-    logit_paddings=np.zeros(logits.shape[:2])
+    l=[0.0 for i in range(n)]+[1.0 for i in range(127-n)]
+    logit_paddings=np.array([l for i in range(100)])
     label_paddings=np.where(targets>0,0.0,1.0)
     losss=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
     print(losss)
