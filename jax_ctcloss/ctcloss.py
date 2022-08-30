@@ -75,22 +75,24 @@ if __name__ =="__main__":
 
     losss=ctcloss(logits, targets,input_len,target_len)
     print(losss)
-    # start=time.time()
-    # for i in range(100):
-    #     losss=ctcloss(logits, targets,input_len,target_len)   
-    #     print(losss[0],end=" ")
-    # print("")
-    # print(time.time()-start)
+
+    start=time.time()
+    for i in range(100):
+        losss=ctcloss(logits, targets,input_len,target_len)   
+        print(losss[0],end=" ")
+    print("")
+    print(time.time()-start)
 
     
     logit_paddings=np.zeros(logits.shape[:2])
     label_paddings=np.where(targets>0,0.0,1.0)
     losss=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
     print(losss)
-    # start=time.time()
-    # for i in range(100):
-    #     l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
-    #     print(l[0],end=" ")
-    # print("")
-    # print(time.time()-start)
+
+    start=time.time()
+    for i in range(100):
+        l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
+        print(l[0],end=" ")
+    print("")
+    print(time.time()-start)
     
