@@ -47,12 +47,12 @@ def apply_model(state, batch,old_batch_stats):
     
     logits,mutated_vars = state.apply_fn({'params': params,"batch_stats":old_batch_stats}, images,is_training=True, mutable=['batch_stats'])
     
-    # label_paddings=jnp.where(target>0,0.0,1.0)
-    # logit_paddings=jnp.zeros(logits.shape[0:2])
-    # loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
-    # loss=jnp.mean(loss)
+    label_paddings=jnp.where(target>0,0.0,1.0)
+    logit_paddings=jnp.zeros(logits.shape[0:2])
+    loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
+    loss2=jnp.mean(loss)
     
-    loss=ctcloss(logits,target,input_len,target_len)
+    loss=ctcloss(logits,target,input_len+2,target_len)
     loss=jnp.mean(loss)
     
 
@@ -64,10 +64,10 @@ def apply_model(state, batch,old_batch_stats):
     # weight_penalty = weight_decay * 0.5 * weight_l2
     # loss =  weight_penalty
 
-    return loss, (logits,mutated_vars['batch_stats'])    
+    return loss, (logits,mutated_vars['batch_stats'],loss2)    
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
-  (loss, (logits,new_batch_stats)), grads = grad_fn(state.params,old_batch_stats)
-  return grads, loss,new_batch_stats,logits
+  (loss, (logits,new_batch_stats,loss2)), grads = grad_fn(state.params,old_batch_stats)
+  return grads, loss,new_batch_stats,logits,loss2
 
 @jax.jit
 def update_model(state, grads):
@@ -161,7 +161,7 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
   start=time.time()
   for i,batch in enumerate(train_ds):
     image_i, target, input_len, target_len=batch
-    grads, loss, batch_stats,logits= apply_model(state, batch,batch_stats)    
+    grads, loss, batch_stats,logits,loss2= apply_model(state, batch,batch_stats)    
     state = update_model(state, grads)
     
     epoch_loss.append(loss)
@@ -171,7 +171,7 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
       acc_count+=accuracy
       acc_total+=total
       p=accuracy/total if total>1 else 0
-      print(f"({loss:0.4f},{total},{p:0.4f})") 
+      print(f"({loss:0.4f},{loss2:0.4f}{total},{p:0.4f})") 
       print("i:",i,time.time()-start)
       start=time.time()
   
@@ -191,11 +191,12 @@ def train_and_evaluate() -> train_state.TrainState:
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
   best=0
-  filename="ctc_fast_best.npy"
+  filename="ctc_fast_test.npy"
   if os.path.exists(filename):
-    weight={"state":state,"batch_stats":batch_stats,"p":best}
+    weight={"params":state.params,"batch_stats":batch_stats,"p":best}
     weight=load_weights(weight, filename)
-    state=weight["state"]
+    params=weight["params"]
+    state=state.replace(params=params)
     batch_stats=weight["batch_stats"]
     best=weight["p"]
     print(f"load best={best}")
@@ -218,11 +219,12 @@ def train_and_evaluate() -> train_state.TrainState:
     if p>best :  
       best=p
       print("save to ",filename,p)
-      weight={"state":state,"batch_stats":batch_stats,"p":p}
+      weight={"params":state.params,"batch_stats":batch_stats,"p":p}
       save_weights(weight, filename)
-      weight={"state":state,"batch_stats":batch_stats,"p":p}
+      weight={"params":state,"batch_stats":batch_stats,"p":p}
       weight=load_weights(weight, filename)
-      state=weight["state"]
+      params=weight["params"]
+      state=state.replace(params=params)
       batch_stats=weight["batch_stats"]
       p=weight["p"]
       
