@@ -20,6 +20,7 @@ time:2608.44
   139]
 save to  cann_best.npy 0.990515412454761
 '''
+HEADS=4
 class CANN2(nn.Module):
   class_nums:int
   @nn.compact
@@ -49,32 +50,31 @@ class CANN2(nn.Module):
     x = nn.relu(x)
     x = nn.max_pool(x, window_shape=(2, 2), strides=(1, 2),padding="same") # [B,512,W/4,2]
     
-    x = nn.Conv(features=512, kernel_size=(2, 2),padding="valid")(x)# [B,512,W/4,1]?
+    x = nn.Conv(features=512*HEADS, kernel_size=(2, 2),padding="valid")(x)# [B,512,W/4,1]?
     x = nn.BatchNorm(use_running_average=not is_training)(x)
     x = nn.relu(x)
-    x=x.reshape(x.shape[0],x.shape[1],-1)
+    
+    x=x.reshape(x.shape[0],x.shape[1],HEADS,-1)
+    x=x.transpose(2,0,1,3)
+    
+    t=[]
+    for i in range(HEADS):
+      q = nn.Dense(features=512)(x[i])    
+      k = nn.Dense(features=512)(x[i])
+      v = nn.Dense(features=512)(x[i])
       
-    q = nn.Dense(features=512)(x)    
-    k = nn.Dense(features=512)(x)
-    v = nn.Dense(features=512)(x)
-    
-    qk=jnp.einsum("btk,bsk->bts",q,k)/32
-    qk=nn.softmax(qk,axis=-1)    
-    qkv1=jnp.einsum("btk,bts->bsk",v,qk)
+      qk=jnp.einsum("btk,bsk->bts",q,k)/32
+      qk=nn.softmax(qk,axis=-1)    
+      qkv1=jnp.einsum("btk,bts->bsk",v,qk)
+      t.append(qkv1)
+    att=jnp.array(t)
+    x=att.transpose((1,2,0,3))
+    x=x.reshape(x.shape[0],x.shape[1],-1)
 
-    q = nn.Dense(features=512)(x)    
-    k = nn.Dense(features=512)(x)
-    v = nn.Dense(features=512)(x)
-    
-    qk=jnp.einsum("btk,bsk->bts",q,k)/32
-    qk=nn.softmax(qk,axis=-1)    
-    qkv2=jnp.einsum("btk,bts->bsk",v,qk)
-
-    x=jnp.concatenate([qkv1,qkv2],axis=-1)
     x=nn.Dense(features=self.class_nums)(x)  
   
     return x
 
 if __name__ =="__main__":
-    cnn = CANN(class_nums=9)
+    cnn = CANN2(class_nums=9)
     variables=cnn.init(jax.random.PRNGKey(0), jnp.ones([2,512, 32, 1]))
