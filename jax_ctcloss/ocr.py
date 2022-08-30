@@ -15,7 +15,7 @@ import os
 from tqdm import tqdm, trange
 from crnn import CRNN
 from cann import CANN
-from cann import CANN2
+from cann2 import CANN2
 from carnn import CARNN
 from config import cfg
 # from ctcloss_enhance import ctcloss
@@ -48,10 +48,10 @@ def apply_model(state, batch,old_batch_stats):
     
     logits,mutated_vars = state.apply_fn({'params': params,"batch_stats":old_batch_stats}, images,is_training=True, mutable=['batch_stats'])
     
-    label_paddings=jnp.where(target>0,0.0,1.0)
-    logit_paddings=jnp.zeros(logits.shape[0:2])
-    loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
-    loss2=jnp.mean(loss)
+    # label_paddings=jnp.where(target>0,0.0,1.0)
+    # logit_paddings=jnp.zeros(logits.shape[0:2])
+    # loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
+    # loss2=jnp.mean(loss)
     
     loss=ctcloss(logits,target,input_len+2,target_len)
     loss=jnp.mean(loss)
@@ -65,7 +65,7 @@ def apply_model(state, batch,old_batch_stats):
     # weight_penalty = weight_decay * 0.5 * weight_l2
     # loss =  weight_penalty
 
-    return loss, (logits,mutated_vars['batch_stats'],loss2)    
+    return loss, (logits,mutated_vars['batch_stats'],1.0)    
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
   (loss, (logits,new_batch_stats,loss2)), grads = grad_fn(state.params,old_batch_stats)
   return grads, loss,new_batch_stats,logits,loss2
@@ -192,7 +192,7 @@ def train_and_evaluate() -> train_state.TrainState:
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
   best=0
-  filename="ctc_fast_test.npy"
+  filename="cann2.npy"
   if os.path.exists(filename):
     weight={"params":state.params,"batch_stats":batch_stats,"p":best}
     weight=load_weights(weight, filename)
