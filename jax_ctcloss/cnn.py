@@ -8,9 +8,7 @@ import pickle
 
 
 class CNN(nn.Module):
-  '''
-  一个cnn已经足够，再加其他设施干什么
-  '''
+
   class_nums:int
   @nn.compact
   def __call__(self, x,is_training:bool=True):   

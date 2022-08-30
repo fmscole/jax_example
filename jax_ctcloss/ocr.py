@@ -17,6 +17,7 @@ from crnn import CRNN
 from cann import CANN
 from cann2 import CANN2
 from carnn import CARNN
+from cnn import CNN
 from config import cfg
 # from ctcloss_enhance import ctcloss
 # from ctcloss_simple import ctcloss
@@ -75,7 +76,7 @@ def update_model(state, grads):
   return state.apply_gradients(grads=grads)
 
 def create_train_state(rng):
-  crnn = CANN2(class_nums=len(data_set.alpha))
+  crnn = CNN(class_nums=len(data_set.alpha))
   variables=crnn.init(rng, jnp.ones([100, 512, 32,1]))
   params = variables['params']
   batch_stats=variables['batch_stats']
