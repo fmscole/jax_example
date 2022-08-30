@@ -222,7 +222,7 @@ def train_and_evaluate() -> train_state.TrainState:
       print("save to ",filename,p)
       weight={"params":state.params,"batch_stats":batch_stats,"p":p}
       save_weights(weight, filename)
-      weight={"params":state,"batch_stats":batch_stats,"p":p}
+      weight={"params":state.params,"batch_stats":batch_stats,"p":p}
       weight=load_weights(weight, filename)
       params=weight["params"]
       state=state.replace(params=params)
