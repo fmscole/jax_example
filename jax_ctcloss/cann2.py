@@ -54,23 +54,23 @@ class CANN2(nn.Module):
     x = nn.BatchNorm(use_running_average=not is_training)(x)
     x = nn.relu(x)
 
-    x=x.reshape(x.shape[0],x.shape[1],-1)
-    # x=x.reshape(x.shape[0],x.shape[1],HEADS,-1)
-    # x=x.transpose(2,0,1,3)
+ 
+    x=x.reshape(x.shape[0],x.shape[1],HEADS,-1)
+    x=x.transpose(2,0,1,3)
     
-    # t=[]
-    # for i in range(HEADS):
-    #   q = nn.Dense(features=512)(x[i])    
-    #   k = nn.Dense(features=512)(x[i])
-    #   v = nn.Dense(features=512)(x[i])
+    t=[]
+    for i in range(HEADS):
+      q = nn.Dense(features=512)(x[i])    
+      k = nn.Dense(features=512)(x[i])
+      v = nn.Dense(features=512)(x[i])
       
-    #   qk=jnp.einsum("btk,bsk->bts",q,k)/32
-    #   qk=nn.softmax(qk,axis=-1)    
-    #   qkv1=jnp.einsum("btk,bts->bsk",v,qk)
-    #   t.append(qkv1)
-    # att=jnp.array(t)
-    # x=att.transpose((1,2,0,3))
-    # x=x.reshape(x.shape[0],x.shape[1],-1)
+      qk=jnp.einsum("btk,bsk->bts",q,k)/32
+      qk=nn.softmax(qk,axis=-1)    
+      qkv1=jnp.einsum("btk,bts->bsk",v,qk)
+      t.append(qkv1)
+    att=jnp.array(t)
+    x=att.transpose((1,2,0,3))
+    x=x.reshape(x.shape[0],x.shape[1],-1)
 
     x=nn.Dense(features=self.class_nums)(x)  
   
