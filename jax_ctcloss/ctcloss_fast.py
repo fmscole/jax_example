@@ -44,11 +44,10 @@ def alpha(logits, labels):
         return next_log_alpha,next_log_alpha
 
     _,next_log_alpha_t=jax.lax.scan(loop_for_t,pre_log_alpha,logprobs)             
-    return next_log_alpha_t
+    return next_log_alpha_t.transpose((1,0,2)) #(B,T,L)
 @jax.jit
 def ctcloss(logits, labels,input_len,label_len):
     next_log_alpha_t=alpha(logits, labels)  
-    next_log_alpha_t=next_log_alpha_t.transpose((1,0,2)) #(B,T,L)
     label_len=label_len*2+1    
     loss=jax.vmap(compute_loss,in_axes=0,out_axes=0)(next_log_alpha_t,input_len,label_len)
     return -loss
