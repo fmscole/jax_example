@@ -21,7 +21,7 @@ from cnn import CNN
 from config import cfg
 # from ctcloss_enhance import ctcloss
 # from ctcloss_simple import ctcloss
-from ctcloss import ctcloss
+from jax_ctcloss.ctclossv1 import ctcloss
 batch_size=100
 num_epochs=100
 class_nums=95
