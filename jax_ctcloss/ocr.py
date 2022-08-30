@@ -65,10 +65,10 @@ def apply_model(state, batch,old_batch_stats):
     # weight_penalty = weight_decay * 0.5 * weight_l2
     # loss =  weight_penalty
 
-    return loss, (logits,mutated_vars['batch_stats'],1.0)    
+    return loss, (logits,mutated_vars['batch_stats'])    
   grad_fn = jax.value_and_grad(loss_fn, has_aux=True)
-  (loss, (logits,new_batch_stats,loss2)), grads = grad_fn(state.params,old_batch_stats)
-  return grads, loss,new_batch_stats,logits,loss2
+  (loss, (logits,new_batch_stats)), grads = grad_fn(state.params,old_batch_stats)
+  return grads, loss,new_batch_stats,logits
 
 @jax.jit
 def update_model(state, grads):
@@ -162,7 +162,7 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
   start=time.time()
   for i,batch in enumerate(train_ds):
     image_i, target, input_len, target_len=batch
-    grads, loss, batch_stats,logits,loss2= apply_model(state, batch,batch_stats)    
+    grads, loss, batch_stats,logits= apply_model(state, batch,batch_stats)    
     state = update_model(state, grads)
     
     epoch_loss.append(loss)
@@ -172,7 +172,7 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
       acc_count+=accuracy
       acc_total+=total
       p=accuracy/total if total>1 else 0
-      print(f"({loss:0.4f},{loss2:0.4f}{total},{p:0.4f})") 
+      print(f"({loss:0.4f}{total},{p:0.4f})") 
       print("i:",i,time.time()-start)
       start=time.time()
   
