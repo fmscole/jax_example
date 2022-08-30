@@ -193,7 +193,7 @@ def train_and_evaluate() -> train_state.TrainState:
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
   best=0
-  filename="cann0.npy"
+  filename="cnn_best.npy"
   if os.path.exists(filename):
     weight={"params":state.params,"batch_stats":batch_stats,"p":best}
     weight=load_weights(weight, filename)
