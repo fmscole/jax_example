@@ -52,7 +52,7 @@ def apply_model(state, batch,old_batch_stats):
     # loss=optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=target,label_paddings=label_paddings)
     # loss=jnp.mean(loss)
     
-    loss=ctcloss(logits,target,input_len+2,target_len)
+    loss=ctcloss(logits,target,input_len,target_len)
     loss=jnp.mean(loss)
     
 
