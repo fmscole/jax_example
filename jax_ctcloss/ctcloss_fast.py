@@ -21,8 +21,7 @@ def alpha(logits, labels):
     B,L=labels.shape
 
     one_hot=jax.nn.one_hot(labels,K)
-    logprobs=np.einsum("blk,btk->blt",one_hot,log_y)
-    logprobs=logprobs.transpose(2,0,1)
+    logprobs=np.einsum("blk,btk->tbl",one_hot,log_y)
 
     pre_log_alpha=np.ones((B,L))*ninf
     pre_log_alpha=pre_log_alpha.at[:,0].set(0.0)
