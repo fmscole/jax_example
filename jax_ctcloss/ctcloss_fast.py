@@ -47,6 +47,12 @@ def alpha(logits, labels):
     return next_log_alpha_t.transpose((1,0,2)) #(B,T,L)
 @jax.jit
 def ctcloss(logits, labels,input_len,label_len):
+    '''
+    logits:(B,T,K)
+    labels:(B,L)
+    input_len:(B,)
+    label_len:(B,)
+    '''
     next_log_alpha_t=alpha(logits, labels)  
     label_len=label_len*2+1    
     loss=jax.vmap(compute_loss,in_axes=0,out_axes=0)(next_log_alpha_t,input_len,label_len)
