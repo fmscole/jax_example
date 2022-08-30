@@ -15,6 +15,7 @@ import os
 from tqdm import tqdm, trange
 from crnn import CRNN
 from cann import CANN
+from cann import CANN2
 from carnn import CARNN
 from config import cfg
 # from ctcloss_enhance import ctcloss
@@ -74,7 +75,7 @@ def update_model(state, grads):
   return state.apply_gradients(grads=grads)
 
 def create_train_state(rng):
-  crnn = CANN(class_nums=len(data_set.alpha))
+  crnn = CANN2(class_nums=len(data_set.alpha))
   variables=crnn.init(rng, jnp.ones([100, 512, 32,1]))
   params = variables['params']
   batch_stats=variables['batch_stats']
