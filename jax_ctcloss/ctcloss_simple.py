@@ -7,11 +7,7 @@ def _logsumexp(a, b):
     a,b=jax.lax.cond(a < b,lambda a,b:(b,a),lambda a,b:(a,b),a,b)    
     return a +np.log(1 + np.exp(b - a)) 
 
-# def logsumexp(*args):
-#     res = args[0]
-#     for e in args[1:]:
-#         res = _logsumexp(res, e)
-#     return res
+
 def loop_for_insert_blank(i,state):
     new_labels,labels,blank=state
     new_labels.at[2*i+1].set(labels[i])
