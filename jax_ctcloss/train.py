@@ -108,57 +108,38 @@ def test(state, batch_stats,test_ds):
     image_i, target, input_len, target_len=batch
     image_i=image_i.transpose(0,2,3,1)
     logits= predict(state, batch_stats,image_i)
-    for i in range(logits.shape[0]):
-      label_len=target_len[i]
-      total+=label_len
 
-      y=logits[i]
-      y=np.argmax(y,axis=-1)
-      y=remove_blank(y)      
-      y=np.array(y)
-
-      label_len=np.minimum(y.shape[0],label_len)
-      y=y[:label_len]
-      label=target[i]
-      label=label[:label_len]
-      
-      label=np.array(label)
-      # if y.shape!=label.shape:
-      # print(y,label)
-      accuracy += np.sum(y == label)  
-      
-    # print(accuracy,y,label)
+    accuracy_i,total_i=acc_count_fun(logits,target,target_len,verbose=0)
+    accuracy+=accuracy_i
+    total+=total_i
+    print(f"{accuracy/total:0.3f}",end=" ")
   print("")
-  print(y)
-  print(label)
   return accuracy,total
-def acc_count_fun(logits,target,target_len):  
+def acc_count_fun(logits,target,target_len,verbose=1):  
   accuracy=0
   total=0  
   for i in range(logits.shape[0]):
-    label_len=target_len[i]
-    total+=label_len
-
-    
     y=logits[i]
     y=np.argmax(y,axis=-1)
     y=remove_blank(y)    
     y=np.array(y)
-    
-    label_len=np.minimum(y.shape[0],label_len)
-    y=y[:label_len]
+
+    label_len=target_len[i]
+    label_len_max=np.maximum(y.shape[0],label_len)
+    total+=label_len_max
+
+    label_len_min=np.minimum(y.shape[0],label_len)
+    y=y[:label_len_min]
     label=target[i]
-    label=label[:label_len]
+    label=label[:label_len_min]
     
     label=np.array(label)
-    # if y.shape!=label.shape:
-    # print(y,label)
     accuracy += np.sum(y == label)  
-    
-    # print(accuracy,y,label)
-  print("")
-  print(y)
-  print(label)
+
+  if verbose==1:
+    print("")
+    print(y)
+    print(label)
   return accuracy,total
 def train_epoch(state, train_ds, batch_size, rng,batch_stats):
   train_ds_size = 60000
