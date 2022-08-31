@@ -190,7 +190,7 @@ class Generator(Dataset):
         if self.is_train:
             return 64*10000
         else:
-            return 64*100
+            return 128*200
 
 
 
@@ -240,7 +240,7 @@ data_loader = DataLoader(data_set, batch_size=150, sampler=train_sampler,
 
 val_set = Generator(cfg.word.get_all_words(), 'horizontal',is_train=False)
 val_sampler = torch.utils.data.RandomSampler(val_set)
-val_loader = DataLoader(val_set, batch_size=32, sampler=val_sampler,
+val_loader = DataLoader(val_set, batch_size=128, sampler=val_sampler,
                              num_workers=4,collate_fn=numpy_collate)
 
 if __name__ == '__main__':
