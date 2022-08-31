@@ -109,12 +109,14 @@ def test(state, batch_stats,test_ds):
     image_i=image_i.transpose(0,2,3,1)
     logits= predict(state, batch_stats,image_i)
     for i in range(logits.shape[0]):
-      y=logits[i]
-      y=np.argmax(y,axis=-1)
-      y=remove_blank(y)
       label_len=target_len[i]
       total+=label_len
+
+      y=logits[i]
+      y=np.argmax(y,axis=-1)
+      y=remove_blank(y)      
       y=np.array(y)
+
       label_len=np.minimum(y.shape[0],label_len)
       y=y[:label_len]
       label=target[i]
@@ -134,12 +136,15 @@ def acc_count_fun(logits,target,target_len):
   accuracy=0
   total=0  
   for i in range(logits.shape[0]):
-    y=logits[i]
-    y=np.argmax(y,axis=-1)
-    y=remove_blank(y)
     label_len=target_len[i]
     total+=label_len
+
+    
+    y=logits[i]
+    y=np.argmax(y,axis=-1)
+    y=remove_blank(y)    
     y=np.array(y)
+    
     label_len=np.minimum(y.shape[0],label_len)
     y=y[:label_len]
     label=target[i]
