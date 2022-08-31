@@ -190,7 +190,7 @@ def train_and_evaluate() -> train_state.TrainState:
     batch_stats=weight["batch_stats"]
     best=weight["p"]
     print(f"load best={best}")
-
+    best=0.9
   
   for epoch in range(1, 100 + 1):
     train_ds = data_loader
