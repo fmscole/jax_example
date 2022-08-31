@@ -113,6 +113,7 @@ def test(state, batch_stats,test_ds):
       y=np.argmax(y,axis=-1)
       y=remove_blank(y)
       label_len=target_len[i]
+      total+=label_len
       y=np.array(y)
       label_len=np.minimum(y.shape[0],label_len)
       y=y[:label_len]
@@ -123,7 +124,7 @@ def test(state, batch_stats,test_ds):
       # if y.shape!=label.shape:
       # print(y,label)
       accuracy += np.sum(y == label)  
-      total+=label_len
+      
     # print(accuracy,y,label)
   print("")
   print(y)
@@ -137,6 +138,7 @@ def acc_count_fun(logits,target,target_len):
     y=np.argmax(y,axis=-1)
     y=remove_blank(y)
     label_len=target_len[i]
+    total+=label_len
     y=np.array(y)
     label_len=np.minimum(y.shape[0],label_len)
     y=y[:label_len]
@@ -147,7 +149,7 @@ def acc_count_fun(logits,target,target_len):
     # if y.shape!=label.shape:
     # print(y,label)
     accuracy += np.sum(y == label)  
-    total+=label_len
+    
     # print(accuracy,y,label)
   print("")
   print(y)
@@ -193,7 +195,7 @@ def train_and_evaluate() -> train_state.TrainState:
   rng, init_rng = jax.random.split(rng)
   state,batch_stats = create_train_state(init_rng)
   best=0
-  filename="cnn_best.npy"
+  filename="cnn_bestv1.npy"
   if os.path.exists(filename):
     weight={"params":state.params,"batch_stats":batch_stats,"p":best}
     weight=load_weights(weight, filename)
