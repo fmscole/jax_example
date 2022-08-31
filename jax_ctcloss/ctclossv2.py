@@ -1,7 +1,7 @@
 import jax.numpy as np
 import jax
 
-ninf =-1e5#-np.inf
+ninf =-1e5
 
 def compute_loss(log_alpha_blank,log_alpha_char,t,i):
     return np.logaddexp(log_alpha_blank[t-1,i],log_alpha_char[t-1,i-1])
@@ -30,16 +30,18 @@ def alpha(logits, labels,blank=0):
     def loop_for_t(pre_log_alpha,t):
         pre_log_alpha_blank,pre_log_alpha_char = pre_log_alpha 
         logprobs_blank,logprobs_char=t
+        #blank
         next_log_alpha_blank_with_blank=pre_log_alpha_blank+logprobs_blank
         next_log_alpha_blank_with_char=pre_log_alpha_char+logprobs_blank
-        next_log_alpha_blank=np.concatenate([next_log_alpha_blank_with_blank[:,:1],np.logaddexp(next_log_alpha_blank_with_blank[:,1:],next_log_alpha_blank_with_char)],axis=-1)
-        
+        next_log_alpha_blank_add=np.logaddexp(next_log_alpha_blank_with_blank[:,1:],next_log_alpha_blank_with_char)
+        next_log_alpha_blank=np.concatenate([next_log_alpha_blank_with_blank[:,:1],next_log_alpha_blank_add],axis=-1)
+        #label
         next_log_alpha_char_with_char=pre_log_alpha_char+logprobs_char
         next_log_alpha_char_with_blank=pre_log_alpha_blank[:,:-1] +logprobs_char
-        a=np.logaddexp(next_log_alpha_char_with_char,next_log_alpha_char_with_blank)
-        b = pre_log_alpha_char[:,:-1] 
-        b=np.pad(b,((0,0),(1,0)),mode="constant",constant_values=ninf)
-        next_log_alpha_char=np.logaddexp(a,b+logprobs_char+mask)
+        add_blank_pretimechar=np.logaddexp(next_log_alpha_char_with_char,next_log_alpha_char_with_blank)
+        char2 = pre_log_alpha_char[:,:-1] 
+        char2=np.pad(char2,((0,0),(1,0)),mode="constant",constant_values=ninf)
+        next_log_alpha_char=np.logaddexp(add_blank_pretimechar,char2+logprobs_char+mask)
         
         return (next_log_alpha_blank,next_log_alpha_char),(next_log_alpha_blank,next_log_alpha_char)
 
@@ -86,19 +88,19 @@ if __name__ =="__main__":
     losss=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
     print(losss)
 
-    start=time.time()
-    for i in range(1000):
-        l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
-        print(l[0],end=" ")
-    print("")
-    print("optax")
-    print(time.time()-start)
+    # start=time.time()
+    # for i in range(1000):
+    #     l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
+    #     print(l[0],end=" ")
+    # print("")
+    # print("optax")
+    # print(time.time()-start)
     
 
-    start=time.time()
-    for i in range(1000):
-        losss=ctcloss(logits, targets,input_len,target_len)   
-        print(losss[0],end=" ")
-    print("")
-    print("v2")
-    print(time.time()-start)
+    # start=time.time()
+    # for i in range(1000):
+    #     losss=ctcloss(logits, targets,input_len,target_len)   
+    #     print(losss[0],end=" ")
+    # print("")
+    # print("v2")
+    # print(time.time()-start)
