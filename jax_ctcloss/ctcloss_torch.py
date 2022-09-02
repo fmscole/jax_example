@@ -1,0 +1,141 @@
+
+import torch as np
+import torch.nn.functional as F
+
+ninf =-1e30#-np.inf
+
+def insert_blank(labels, blank=0):
+    new_labels=[blank] 
+    for l in labels:
+        new_labels += [l, blank]
+    # new_labels=np.tensor(new_labels)
+    return new_labels
+def compute_loss(log_alpha,t,i):
+    t_onehot=F.one_hot(t-1)
+    t_onehot=t_onehot.to(np.float32)
+    log_alpha=np.einsum("btl,bt->bl",log_alpha,t_onehot)
+
+    i1_onehot=F.one_hot(i-1)
+    i1_onehot=i1_onehot.to(np.float32)
+    logprobs1=np.einsum("bl,bl->b",log_alpha,i1_onehot)
+
+    i2_onehot=F.one_hot(i-2)
+    i2_onehot=F.pad(i2_onehot,(0,1,0,0))
+    i2_onehot=i1_onehot.to(np.float32)
+    logprobs2=np.einsum("bl,bl->b",log_alpha,i2_onehot)
+    
+    return np.logaddexp(logprobs1,logprobs2)
+    
+def alpha(log_y, labels):
+    B,T, K = log_y.shape
+    B,L=labels.shape
+
+    one_hot=F.one_hot(labels,K)
+    one_hot=one_hot.to(np.float32)
+    log_y=log_y.to(np.float32)
+    logprobs=np.einsum("blk,btk->tbl",one_hot,log_y)
+
+    pre_log_alpha=np.ones((B,L))*ninf
+    pre_log_alpha[:,0]=0.0
+    
+    mask=np.tensor(labels[:,:-2]==labels[:,2:])
+    mask=mask.to(np.int32)
+    mask=1-mask
+    mask=F.pad(mask,(2,0,0,0))
+    z=np.zeros_like(mask)
+    z=z.to(np.float32)
+    n=np.ones_like(mask)*ninf
+    mask=np.where(mask>0,z,n)
+    
+    def loop_for_t(pre_log_alpha,t):
+        a = pre_log_alpha 
+        b = pre_log_alpha[:,:-1] 
+        b=F.pad(b,(1,0,0,0),mode="constant",value=ninf)
+        c=pre_log_alpha[:,:-2]  
+        c=F.pad(c,(2,0,0,0),mode="constant",value=ninf)        
+        d= np.logaddexp(a+t,b+t)   
+        next_log_alpha= np.logaddexp(d,c+t+mask)
+        return next_log_alpha
+
+    t=[]
+    for i in range(logprobs.size(0)):
+        pre_log_alpha=loop_for_t(pre_log_alpha,logprobs[i])
+        t.append(pre_log_alpha)
+    next_log_alpha_t=np.stack(t,dim=0)   
+        
+    return next_log_alpha_t.transpose(1,0) ,logprobs.transpose(1,0)
+
+def beta(log_y, labels):
+    log_y=np.flip(log_y,dims=[1])
+    return alpha(log_y, labels)
+
+def ctcloss(logits, labels,input_len,label_len):
+    '''
+    logits:(B,T,K)
+    labels:(B,L)
+    input_len:(B,)
+    label_len:(B,)
+    '''
+    log_y=F.log_softmax(logits,dim=-1) 
+    blank_cher=[insert_blank(i) for i in labels ]
+   
+    labels=np.tensor(blank_cher, dtype=np.long)
+    label_len=label_len*2+1  
+
+    next_log_alpha_t,logprobs=alpha(log_y, labels)    
+    loss=compute_loss(next_log_alpha_t,input_len,label_len)
+
+    # next_log_beta_t,_=beta(log_y, labels)  
+    # next_log_beta_t=np.flip(next_log_beta_t,dims=[1])
+    # alpha_beta=next_log_alpha_t+next_log_beta_t    
+    # grad=alpha_beta-2*logprobs
+        
+    # loss_mean=np.mean(loss)
+    # back=grad+loss_mean
+    return loss
+
+if __name__ =="__main__":
+    import optax
+    import numpy
+    import time
+    n=127
+    numpy.random.seed(0)
+    logits=numpy.random.random((100,127,5990))
+    logits=np.tensor(logits)
+    input_len=np.tensor([n for i in range(100)])
+
+    targets=numpy.random.randint(1,26,(100,20))
+    target_len=np.tensor([20 for i in range(100)])
+    # targets=np.pad(targets,pad_width=((0,0),(0,60)))
+    # print(targets)
+    # @jax.jit
+    # def ctcloss2(logits,logit_paddings,targets,label_paddings):
+    #     return optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings)
+
+    losss=ctcloss(logits, targets,input_len,target_len)
+    print(losss)
+
+    
+    
+    # l=[0.0 for i in range(n)]+[1.0 for i in range(127-n)]
+    # logit_paddings=np.array([l for i in range(100)])
+    # label_paddings=np.where(targets>0,0.0,1.0)
+    # losss=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
+    # print(losss)
+
+    # start=time.time()
+    # for i in range(1000):
+    #     l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
+    #     print(l[0],end=" ")
+    # print("")
+    # print("optax:")
+    # print(time.time()-start)
+
+    # start=time.time()
+    # for i in range(1000):
+    #     losss=ctcloss(logits, targets,input_len,target_len)   
+    #     print(losss[0],end=" ")
+    # print("")
+    # print("v1:")
+    # print(time.time()-start)
+    
