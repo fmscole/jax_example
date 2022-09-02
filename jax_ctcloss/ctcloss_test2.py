@@ -68,7 +68,7 @@ def ctcloss(logits, labels,input_len,label_len):
     '''
     loss=alpha(logits, labels,input_len,label_len)  
     
-    return loss
+    return -loss.mean()
 
 if __name__ =="__main__":
     import optax
@@ -106,11 +106,11 @@ if __name__ =="__main__":
     # print("optax:")
     # print(time.time()-start)
 
-    # start=time.time()
-    # for i in range(1000):
-    #     losss=ctcloss(logits, targets,input_len,target_len)   
-    #     print(losss[0],end=" ")
-    # print("")
-    # print("v1:")
-    # print(time.time()-start)
+    start=time.time()
+    for i in range(1000):
+        losss=ctcloss(logits, targets,input_len,target_len)   
+        print(losss[0],end=" ")
+    print("")
+    print("v1:")
+    print(time.time()-start)
     

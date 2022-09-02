@@ -20,7 +20,7 @@ def compute_loss(log_alpha,t,i):
     logprobs1=np.einsum("bl,bl->b",log_alpha,i1_onehot)
 
     i2_onehot=F.one_hot(i-2)
-    i2_onehot=F.pad(i2_onehot,(0,1,0,0))
+    # i2_onehot=F.pad(i2_onehot,(0,1,0,0))
     i2_onehot=i1_onehot.to(np.float32)
     logprobs2=np.einsum("bl,bl->b",log_alpha,i2_onehot)
     
@@ -92,12 +92,13 @@ def ctcloss(logits, labels,input_len,label_len):
         
     # loss_mean=np.mean(loss)
     # back=grad+loss_mean
-    return loss
+    return -loss.mean()
 
 if __name__ =="__main__":
     import optax
     import numpy
     import time
+    import jax
     n=127
     numpy.random.seed(0)
     logits=numpy.random.random((100,127,5990))
@@ -118,7 +119,7 @@ if __name__ =="__main__":
     
     
     # l=[0.0 for i in range(n)]+[1.0 for i in range(127-n)]
-    # logit_paddings=np.array([l for i in range(100)])
+    # logit_paddings=np.tensor([l for i in range(100)])
     # label_paddings=np.where(targets>0,0.0,1.0)
     # losss=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
     # print(losss)
@@ -131,11 +132,11 @@ if __name__ =="__main__":
     # print("optax:")
     # print(time.time()-start)
 
-    # start=time.time()
-    # for i in range(1000):
-    #     losss=ctcloss(logits, targets,input_len,target_len)   
-    #     print(losss[0],end=" ")
-    # print("")
-    # print("v1:")
-    # print(time.time()-start)
+    start=time.time()
+    for i in range(1000):
+        losss=ctcloss(logits, targets,input_len,target_len)   
+        print(losss[0],end=" ")
+    print("")
+    print("v1:")
+    print(time.time()-start)
     
