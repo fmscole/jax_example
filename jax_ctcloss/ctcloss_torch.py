@@ -35,6 +35,7 @@ def alpha(log_y, labels,input_len,label_len):
 
     pre_log_alpha=np.ones((B,L))*ninf
     pre_log_alpha[:,0]=0.0
+    pre_log_alpha=pre_log_alpha.to(device="cuda")
     
     mask=np.tensor(labels[:,:-2]==labels[:,2:])
     mask=mask.to(np.int32)
@@ -45,7 +46,7 @@ def alpha(log_y, labels,input_len,label_len):
     n=np.ones_like(mask)*ninf
     mask=np.where(mask>0,z,n)
     mask=mask.to(device="cuda")
-    pre_log_alpha=pre_log_alpha.to(device="cuda")
+    
     def loop_for_t(pre_log_alpha,t):
         a = pre_log_alpha 
         b = pre_log_alpha[:,:-1] 
