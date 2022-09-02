@@ -1,32 +1,30 @@
 
 import torch as np
 import torch.nn.functional as F
-
+np.cuda.set_device(0)
 ninf =-1e30#-np.inf
 
 def insert_blank(labels, blank=0):
     new_labels=[blank] 
     for l in labels:
         new_labels += [l, blank]
-    # new_labels=np.tensor(new_labels)
     return new_labels
-def compute_loss(log_alpha,t,i):
-    t_onehot=F.one_hot(t-1)
+def compute_loss(log_alpha,t,i,T,L):
+    t_onehot=F.one_hot(t-1,num_classes=T)
     t_onehot=t_onehot.to(np.float32)
     log_alpha=np.einsum("btl,bt->bl",log_alpha,t_onehot)
 
-    i1_onehot=F.one_hot(i-1)
+    i1_onehot=F.one_hot(i-1,num_classes=L)
     i1_onehot=i1_onehot.to(np.float32)
     logprobs1=np.einsum("bl,bl->b",log_alpha,i1_onehot)
 
-    i2_onehot=F.one_hot(i-2)
-    # i2_onehot=F.pad(i2_onehot,(0,1,0,0))
+    i2_onehot=F.one_hot(i-2,num_classes=L)
     i2_onehot=i1_onehot.to(np.float32)
     logprobs2=np.einsum("bl,bl->b",log_alpha,i2_onehot)
     
     return np.logaddexp(logprobs1,logprobs2)
     
-def alpha(log_y, labels):
+def alpha(log_y, labels,input_len,label_len):
     B,T, K = log_y.shape
     B,L=labels.shape
 
@@ -46,7 +44,8 @@ def alpha(log_y, labels):
     z=z.to(np.float32)
     n=np.ones_like(mask)*ninf
     mask=np.where(mask>0,z,n)
-    
+    mask=mask.to(device="cuda")
+    pre_log_alpha=pre_log_alpha.to(device="cuda")
     def loop_for_t(pre_log_alpha,t):
         a = pre_log_alpha 
         b = pre_log_alpha[:,:-1] 
@@ -62,9 +61,9 @@ def alpha(log_y, labels):
         pre_log_alpha=loop_for_t(pre_log_alpha,logprobs[i])
         t.append(pre_log_alpha)
     next_log_alpha_t=np.stack(t,dim=0)   
-        
-    return next_log_alpha_t.transpose(1,0) ,logprobs.transpose(1,0)
-
+    next_log_alpha_t=next_log_alpha_t.transpose(1,0)
+    loss=compute_loss(next_log_alpha_t,input_len,label_len,T,L) 
+    return -loss.mean()
 def beta(log_y, labels):
     log_y=np.flip(log_y,dims=[1])
     return alpha(log_y, labels)
@@ -81,9 +80,14 @@ def ctcloss(logits, labels,input_len,label_len):
    
     labels=np.tensor(blank_cher, dtype=np.long)
     label_len=label_len*2+1  
+    device="cuda"
+    log_y=log_y.to(device)
+    labels=labels.to(device)
+    input_len=input_len.to(device)
+    label_len=label_len.to(device)
 
-    next_log_alpha_t,logprobs=alpha(log_y, labels)    
-    loss=compute_loss(next_log_alpha_t,input_len,label_len)
+    loss=alpha(log_y, labels,input_len,label_len)    
+    
 
     # next_log_beta_t,_=beta(log_y, labels)  
     # next_log_beta_t=np.flip(next_log_beta_t,dims=[1])
@@ -92,7 +96,7 @@ def ctcloss(logits, labels,input_len,label_len):
         
     # loss_mean=np.mean(loss)
     # back=grad+loss_mean
-    return -loss.mean()
+    return loss
 
 if __name__ =="__main__":
     import optax
@@ -135,7 +139,7 @@ if __name__ =="__main__":
     start=time.time()
     for i in range(1000):
         losss=ctcloss(logits, targets,input_len,target_len)   
-        print(losss[0],end=" ")
+        print(losss,end=" ")
     print("")
     print("v1:")
     print(time.time()-start)
