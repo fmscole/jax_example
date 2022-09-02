@@ -19,7 +19,7 @@ def compute_loss(log_alpha,t,i,T,L):
     logprobs1=np.einsum("bl,bl->b",log_alpha,i1_onehot)
 
     i2_onehot=F.one_hot(i-2,num_classes=L)
-    i2_onehot=i1_onehot.to(np.float32)
+    i2_onehot=i2_onehot.to(np.float32)
     logprobs2=np.einsum("bl,bl->b",log_alpha,i2_onehot)
     
     return np.logaddexp(logprobs1,logprobs2)
