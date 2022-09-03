@@ -69,7 +69,7 @@ if __name__ =="__main__":
     logits=numpy.random.random((100,127,5990))
     input_len=np.array([n for i in range(100)])
 
-    targets=numpy.random.randint(1,3,(100,20))
+    targets=numpy.random.randint(1,26,(100,20))
     target_len=np.array([20 for i in range(100)])
     # targets=np.pad(targets,pad_width=((0,0),(0,60)))
 
@@ -77,30 +77,44 @@ if __name__ =="__main__":
     def ctcloss2(logits,logit_paddings,targets,label_paddings):
         return optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings)
 
+    logits=np.array(logits)
+    targets=np.array(targets)
+    input_len=np.array(input_len)
+    target_len=np.array(target_len)
+    jax.device_put(logits)
+    jax.device_put(targets)
+    jax.device_put(input_len)
+    jax.device_put(target_len)
+
     losss=ctcloss(logits, targets,input_len,target_len)
     print(losss)
 
-
+    
     
     l=[0.0 for i in range(n)]+[1.0 for i in range(127-n)]
     logit_paddings=np.array([l for i in range(100)])
     label_paddings=np.where(targets>0,0.0,1.0)
+
+    logit_paddings=np.array(logit_paddings)
+    label_paddings=np.array(label_paddings)
+    jax.device_put(logit_paddings)
+    jax.device_put(label_paddings)
+
     losss=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
     print(losss)
 
-    # start=time.time()
-    # for i in range(1000):
-    #     l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
-    #     print(l[0],end=" ")
-    # print("")
-    # print("optax")
-    # print(time.time()-start)
-    
+    start=time.time()
+    for i in range(1000):
+        l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
+        print(l[0],end=" ")
+    print("")
+    print("optax:")
+    print(time.time()-start)
 
-    # start=time.time()
-    # for i in range(1000):
-    #     losss=ctcloss(logits, targets,input_len,target_len)   
-    #     print(losss[0],end=" ")
-    # print("")
-    # print("v2")
-    # print(time.time()-start)
+    start=time.time()
+    for i in range(1000):
+        losss=ctcloss(logits, targets,input_len,target_len)   
+        print(losss[0],end=" ")
+    print("")
+    print("v1:")
+    print(time.time()-start)

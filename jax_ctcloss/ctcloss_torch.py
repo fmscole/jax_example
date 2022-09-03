@@ -37,15 +37,14 @@ def alpha(log_y, labels,input_len,label_len):
     pre_log_alpha[:,0]=0.0
     pre_log_alpha=pre_log_alpha.to(device="cuda")
     
-    mask=np.tensor(labels[:,:-2]==labels[:,2:])
-    mask=mask.to(np.int32)
+    mask=np.tensor(labels[:,:-2]==labels[:,2:],dtype=np.int32)
     mask=1-mask
     mask=F.pad(mask,(2,0,0,0))
     z=np.zeros_like(mask)
     z=z.to(np.float32)
     n=np.ones_like(mask)*ninf
     mask=np.where(mask>0,z,n)
-    mask=mask.to(device="cuda")
+    
     
     def loop_for_t(pre_log_alpha,t):
         a = pre_log_alpha 
@@ -77,15 +76,11 @@ def ctcloss(logits, labels,input_len,label_len):
     label_len:(B,)
     '''
     log_y=F.log_softmax(logits,dim=-1) 
-    blank_cher=[insert_blank(i) for i in labels ]
+    blank_char=[insert_blank(i) for i in labels ]
    
-    labels=np.tensor(blank_cher, dtype=np.long)
+    labels=np.tensor(blank_char, dtype=np.long)
     label_len=label_len*2+1  
-    device="cuda"
-    log_y=log_y.to(device)
-    labels=labels.to(device)
-    input_len=input_len.to(device)
-    label_len=label_len.to(device)
+    labels=labels.to(device="cuda")
 
     loss=alpha(log_y, labels,input_len,label_len)    
     
@@ -111,35 +106,33 @@ if __name__ =="__main__":
     input_len=np.tensor([n for i in range(100)])
 
     targets=numpy.random.randint(1,26,(100,20))
+    targets=np.tensor(targets)
     target_len=np.tensor([20 for i in range(100)])
-    # targets=np.pad(targets,pad_width=((0,0),(0,60)))
-    # print(targets)
-    # @jax.jit
-    # def ctcloss2(logits,logit_paddings,targets,label_paddings):
-    #     return optax.ctc_loss(logits=logits,logit_paddings=logit_paddings,labels=targets,label_paddings=label_paddings)
+    
 
-    losss=ctcloss(logits, targets,input_len,target_len)
+    logits=logits.to(device="cuda")
+    targets=targets.to(device="cuda")
+    input_len=input_len.to(device="cuda")
+    target_len=target_len.to(device="cuda")
+    losss_foo=np.jit.trace(ctcloss,(logits, targets,input_len,target_len))
+    losss=losss_foo(logits, targets,input_len,target_len)
     print(losss)
 
     
-    
-    # l=[0.0 for i in range(n)]+[1.0 for i in range(127-n)]
-    # logit_paddings=np.tensor([l for i in range(100)])
-    # label_paddings=np.where(targets>0,0.0,1.0)
-    # losss=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
-    # print(losss)
+    logits2=logits.transpose(1,0)
+    start=time.time()
+    for i in range(1000):
+        losss=np.ctc_loss(logits2, targets,input_len,target_len)   
+        print(losss[0],end=" ")
+    print("")
+    print("torch:")
+    print(time.time()-start)
 
-    # start=time.time()
-    # for i in range(1000):
-    #     l=ctcloss2(logits=logits,logit_paddings=logit_paddings,targets=targets,label_paddings=label_paddings)
-    #     print(l[0],end=" ")
-    # print("")
-    # print("optax:")
-    # print(time.time()-start)
+
 
     start=time.time()
     for i in range(1000):
-        losss=ctcloss(logits, targets,input_len,target_len)   
+        losss=losss_foo(logits, targets,input_len,target_len)   
         print(losss,end=" ")
     print("")
     print("v1:")

@@ -220,7 +220,7 @@ def test_font_size():
 from config import cfg
 import torch
 from torch.utils.data.dataloader import DataLoader
-
+import jax
 def numpy_collate(batch):
   if isinstance(batch[0], np.ndarray):
     return np.stack(batch)

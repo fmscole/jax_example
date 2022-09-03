@@ -151,6 +151,7 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
   start=time.time()
   for i,batch in enumerate(train_ds):
     image_i, target, input_len, target_len=batch
+    
     grads, loss, batch_stats,logits= apply_model(state, batch,batch_stats)    
     state = update_model(state, grads)
     
@@ -161,8 +162,8 @@ def train_epoch(state, train_ds, batch_size, rng,batch_stats):
       acc_count+=accuracy
       acc_total+=total
       p=accuracy/total if total>1 else 0
-      print(f"({loss:0.4f}{total},{p:0.4f})") 
-      print("i:",i,time.time()-start)
+      print(f"(loss:{loss:0.4f},total:{total},p:{p:0.4f})") 
+      print("i:",i,f"time:{time.time()-start:0.0f}")
       start=time.time()
   
   train_loss = np.mean(epoch_loss)
